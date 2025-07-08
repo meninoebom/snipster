@@ -90,4 +90,9 @@ dmypy.json
 Thumbs.db
 Desktop.ini
 
-This covers Python-related temp files, build artifacts, test and coverage output, editor settings, and common virtual environment folders. Customize it as needed based on your tooling.
+# Environment variables
+.env
+
+# Ignore SQLite database files
+*.sqlite
+*.sqlite3

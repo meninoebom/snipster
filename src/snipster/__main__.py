@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from sqlmodel import Session, SQLModel, create_engine
 
-from ..models import Item
+from .models import Item
 
 load_dotenv()
 

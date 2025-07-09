@@ -27,7 +27,7 @@ def test_create_snippet():
 
 def test_create_snippet_with_from_dict_cls_method():
     snippet_dict = {"title": "Amazing Snippet", "code": "print('Be amazed!')"}
-    snippet = Snippet.from_dict(snippet_dict)
+    snippet = Snippet.from_dict(**snippet_dict)
     with Session(engine) as session:
         session.add(snippet)
         session.commit()

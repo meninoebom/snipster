@@ -9,7 +9,5 @@ class Snippet(SQLModel, table=True):
     @classmethod
     # "Snippet" is a forward reference that allows
     # type hints to reference the class from inside itself
-    def from_dict(cls, data: dict[str, str]) -> "Snippet":
-        title = data["title"]
-        code = data["code"]
-        return cls(title=title, code=code)
+    def from_dict(cls, **kwargs) -> "Snippet":
+        return cls(**kwargs)

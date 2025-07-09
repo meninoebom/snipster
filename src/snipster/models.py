@@ -1,7 +1,7 @@
 from sqlmodel import Field, SQLModel
 
 
-class Item(SQLModel, table=True):
+class Snippet(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    name: str
-    price: float
+    title: str
+    code: str

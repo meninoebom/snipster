@@ -1,29 +1,19 @@
-import os
+from .db import create_db_and_tables, get_session
+from .models import Snippet
 
-from dotenv import load_dotenv
-from sqlmodel import Session, SQLModel, create_engine
+create_db_and_tables()
 
-from .models import Item
-
-load_dotenv()
-
-db_url = os.getenv("DATABASE_URL", "sqlite:///db.sqlite")
-
-engine = create_engine(db_url, echo=False)
-
-SQLModel.metadata.create_all(engine)
-
-with Session(engine) as session:
-    item = Item(name="Laptop", price=999.99)
-    session.add(item)
+with get_session() as session:
+    snippet = Snippet(title="First Snip", code='print("foo")')
+    session.add(snippet)
     session.commit()
-    session.refresh(item)
+    session.refresh(snippet)
 
 
 def main() -> None:
     print("Hello from snipster!")
     print("Here is an item:")
-    print(item)
+    print(snippet)
 
 
 if __name__ == "__main__":

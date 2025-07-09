@@ -26,6 +26,23 @@ def test_create_snippet():
 
 
 def test_create_snippet_with_from_dict_cls_method():
+    # pytest.raises(...) blocks test
+    # that appropriate errors are raised for invalid inputs
+    with pytest.raises(ValueError, match="Missing required argument: 'title'"):
+        Snippet.from_dict(code="print('foo')")
+
+    with pytest.raises(ValueError, match="Missing required argument: 'code'"):
+        Snippet.from_dict(title="Test Snippet")
+
+    with pytest.raises(TypeError, match="'title' must be a string"):
+        Snippet.from_dict(title=123, code="print('foo')")
+
+    with pytest.raises(TypeError, match="'code' must be a string"):
+        Snippet.from_dict(title="Test Snippet", code=123)
+
+    with pytest.raises(ValueError, match="Title must be at least 3 chars long"):
+        Snippet.from_dict(title="ab", code="print('foo')")
+
     snippet_dict = {"title": "Amazing Snippet", "code": "print('Be amazed!')"}
     snippet = Snippet.from_dict(**snippet_dict)
     with Session(engine) as session:

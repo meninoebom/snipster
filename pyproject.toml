@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-snipster = "snipster:main"
+snipster = "snipster.__main___:main"
 
 [build-system]
 requires = ["hatchling"]

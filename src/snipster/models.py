@@ -9,25 +9,10 @@ class SnippetORM(SQLModel, table=True):
     code: str
 
 
-#     @classmethod
-#     # "Snippet" is a forward reference that allows
-#     # type hints to reference the class from inside itself
-#     def from_dict(cls, **kwargs) -> "Snippet":
-#    if "title" not in kwargs:
-#         raise ValueError("Missing required argument: 'title'")
-#     if "code" not in kwargs:
-#         raise ValueError("Missing required argument: 'code'")
-#     if not isinstance(kwargs["title"], str):
-#         raise TypeError("'title' must be a string")
-#     if not isinstance(kwargs["code"], str):
-#         raise TypeError("'code' must be a string")
-#     if len(kwargs["title"]) < 3:
-#         raise ValueError("Title must be at least 3 chars long")
-#     return cls(**kwargs)
-
-
 class Snippet:
-    def __init__(self, id: Optional[int], title: str, code: str):
+    @staticmethod
+    def _validate_fields(title: str, code: str) -> None:
+        """Validate title and code fields."""
         if not isinstance(title, str):
             raise TypeError("`title` must be a string")
         if len(title) < 3:
@@ -38,6 +23,18 @@ class Snippet:
         if not code.strip():
             raise ValueError("`code` cannot be empty")
 
+    def __init__(self, id: Optional[int], title: str, code: str):
+        self._validate_fields(title, code)
         self.id = id
         self.title = title
         self.code = code
+
+    @classmethod
+    def from_dict(cls, **kwargs) -> "Snippet":
+        if "title" not in kwargs:
+            raise ValueError("Missing required argument: 'title'")
+        if "code" not in kwargs:
+            raise ValueError("Missing required argument: 'code'")
+
+        cls._validate_fields(kwargs["title"], kwargs["code"])
+        return cls(**kwargs)

@@ -1,12 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import Sequence
 
-from sqlmodel import create_engine, select
+from sqlmodel import select
 
 from .db import get_session
 from .models import Snippet, SnippetORM
-
-engine = create_engine("sqlite:///:memory:", echo=True)
 
 
 class AbstractSnippetRepo(ABC):

@@ -15,5 +15,11 @@ class SnippetCreate(SQLModel, table=False):
     @field_validator("title")
     def check_title(cls, value):
         if len(value) < 3:
-            raise ValueError("Title too short")
+            raise ValueError("Title must be at least 3 characters.")
+        return value
+
+    @field_validator("code")
+    def check_code(cls, value):
+        if len(value) < 3:
+            raise ValueError("Code must be at least 3 characters.")
         return value

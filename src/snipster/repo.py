@@ -3,20 +3,20 @@ from typing import Sequence
 
 from sqlmodel import Session, select
 
-from .models import Snippet, SnippetORM
+from .models import SnippetCreate, SnippetORM, SnippetPublic
 
 
 class AbstractSnippetRepo(ABC):
     @abstractmethod
-    def add(self, snippet: Snippet) -> None:
+    def add(self, snippet: SnippetCreate) -> None:
         pass
 
     @abstractmethod
-    def get(self, snippet_id) -> Snippet | None:
+    def get(self, snippet_id) -> SnippetPublic | None:
         pass
 
     @abstractmethod
-    def list(self) -> Sequence[Snippet]:
+    def list(self) -> Sequence[SnippetPublic]:
         pass
 
     @abstractmethod
@@ -24,28 +24,29 @@ class AbstractSnippetRepo(ABC):
         pass
 
 
+def to_public(orm: SnippetORM) -> SnippetPublic:
+    assert orm.id is not None
+    return SnippetPublic(id=orm.id, title=orm.title, code=orm.code)
+
+
 class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def add(self, snippet: Snippet):
-        snippet_orm = SnippetORM(id=snippet.id, title=snippet.title, code=snippet.code)
+    def add(self, snippet: SnippetCreate):
+        snippet_orm = SnippetORM(title=snippet.title, code=snippet.code)
         self.session.add(snippet_orm)
         self.session.commit()
         self.session.refresh(snippet_orm)
 
-    def get(self, snippet_id) -> Snippet | None:
+    def get(self, snippet_id) -> SnippetPublic | None:
         snippet_orm = self.session.get(SnippetORM, snippet_id)
         if snippet_orm:
-            return Snippet(
-                id=snippet_orm.id, title=snippet_orm.title, code=snippet_orm.code
-            )
+            to_public(snippet_orm)
 
-    def list(self) -> Sequence[Snippet]:
+    def list(self) -> Sequence[SnippetPublic]:
         snippet_orms = self.session.exec(select(SnippetORM)).all()
-        return [
-            Snippet(id=orm.id, title=orm.title, code=orm.code) for orm in snippet_orms
-        ]
+        return [to_public(orm) for orm in snippet_orms]
 
     def delete(self, snippet_id: int):
         snippet = self.session.get(SnippetORM, snippet_id)
@@ -56,35 +57,37 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
 
 class InMemorySnippetRepo(AbstractSnippetRepo):
     def __init__(self):
-        self.snippets: dict[int, Snippet] = {}
+        self.snippets: dict[int, SnippetPublic] = {}
+        self._next_id = 1
 
-    def add(self, snippet: Snippet) -> None:
-        if snippet.id is None:
-            snippet.id = max(self.snippets.keys(), default=0) + 1
-        self.snippets[snippet.id] = snippet
+    def add(self, snippet: SnippetCreate) -> None:
+        snippet_public = SnippetPublic(
+            id=self._next_id,
+            title=snippet.title,
+            code=snippet.code,
+        )
+        self.snippets[self._next_id] = snippet_public
+        self._next_id += 1
 
-    def get(self, snippet_id) -> Snippet | None:
-        snippet = self.snippets[snippet_id]
-        if snippet is None:
-            return None
-        return snippet
+    def get(self, snippet_id: int) -> SnippetPublic | None:
+        return self.snippets.get(snippet_id)
 
-    def list(self) -> Sequence[Snippet]:
+    def list(self) -> Sequence[SnippetPublic]:
         return list(self.snippets.values())
 
     def delete(self, snippet_id: int) -> None:
-        del self.snippets[snippet_id]
+        self.snippets.pop(snippet_id, None)
 
 
-class JsonBackedSnippetRepo(AbstractSnippetRepo):
-    def add(self, snippet: Snippet) -> None:
-        pass
+# class JsonBackedSnippetRepo(AbstractSnippetRepo):
+#     def add(self, snippet: SnippetCreate) -> None:
+#         pass
 
-    def get(self, snippet_id) -> Snippet | None:
-        pass
+#     def get(self, snippet_id) -> SnippetCreate | None:
+#         pass
 
-    def list(self) -> Sequence[Snippet]:
-        pass
+#     def list(self) -> Sequence[SnippetCreate]:
+#         pass
 
-    def delete(self, snippet_id: int) -> None:
-        pass
+#     def delete(self, snippet_id: int) -> None:
+#         pass

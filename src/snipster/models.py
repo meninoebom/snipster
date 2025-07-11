@@ -23,3 +23,9 @@ class SnippetCreate(SQLModel, table=False):
         if len(value) < 3:
             raise ValueError("Code must be at least 3 characters.")
         return value
+
+
+class SnippetPublic(SQLModel, table=False):
+    id: int
+    title: str
+    code: str

@@ -1,7 +1,7 @@
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
-from src.snipster.models import SnippetCreate, SnippetORM
+from src.snipster.models import Language, SnippetCreate, SnippetORM
 
 engine = create_engine("sqlite:///:memory:", echo=True)
 
@@ -12,7 +12,11 @@ def setup_database():
 
 
 def test_create_snippet():
-    snippet = SnippetORM(title="Test Snippet", code="print('foo')")
+    snippet = SnippetORM(
+        title="Test Snippet",
+        code="print('foo')",
+        language=Language.PYTHON,
+    )
     with Session(engine) as session:
         session.add(snippet)
         session.commit()
@@ -23,9 +27,17 @@ def test_create_snippet():
 
 def test_snippet_validation():
     with pytest.raises(ValueError) as exception:
-        SnippetCreate(title="Test Snippet", code="_")
+        SnippetCreate(
+            title="Test Snippet",
+            code="_",
+            language=Language.PYTHON,
+        )
     assert "Code must be at least 3 characters." in str(exception.value)
 
     with pytest.raises(ValueError) as exception:
-        SnippetCreate(title="_", code="print('foo')")
+        SnippetCreate(
+            title="_",
+            code="print('foo')",
+            language=Language.PYTHON,
+        )
     assert "Title must be at least 3 characters." in str(exception.value)

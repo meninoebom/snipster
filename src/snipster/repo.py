@@ -3,6 +3,7 @@ from typing import Sequence
 
 from sqlmodel import Session, select
 
+from .exceptions import SnippetNotFoundError
 from .models import SnippetCreate, SnippetORM, SnippetPublic
 
 
@@ -77,7 +78,10 @@ class InMemorySnippetRepo(AbstractSnippetRepo):
         return snippet_public
 
     def get(self, snippet_id: int) -> SnippetPublic | None:
-        return self.snippets.get(snippet_id)
+        snippet = self.snippets.get(snippet_id)
+        if not snippet:
+            raise SnippetNotFoundError
+        return snippet
 
     def list(self) -> Sequence[SnippetPublic]:
         return list(self.snippets.values())

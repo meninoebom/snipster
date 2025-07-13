@@ -28,7 +28,15 @@ class AbstractSnippetRepo(ABC):
 def to_public(orm: SnippetORM) -> SnippetPublic:
     assert orm.id is not None
     return SnippetPublic(
-        id=orm.id, title=orm.title, code=orm.code, language=orm.language
+        id=orm.id,
+        title=orm.title,
+        code=orm.code,
+        language=orm.language,
+        description=orm.description,
+        tags=orm.tags,
+        favorite=orm.favorite,
+        created_at=orm.created_at,
+        updated_at=orm.updated_at,
     )
 
 
@@ -48,7 +56,8 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
     def get(self, snippet_id) -> SnippetPublic | None:
         snippet_orm = self.session.get(SnippetORM, snippet_id)
         if snippet_orm:
-            to_public(snippet_orm)
+            return to_public(snippet_orm)
+        raise SnippetNotFoundError
 
     def list(self) -> Sequence[SnippetPublic]:
         snippet_orms = self.session.exec(select(SnippetORM)).all()

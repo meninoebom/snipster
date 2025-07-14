@@ -3,14 +3,14 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from src.snipster.models import Language, SnippetCreate, SnippetORM
 
-# TODO: Is this missing tests for SnippetPublic?
-
 
 @pytest.fixture(scope="function")
 def get_session():
     engine = create_engine("sqlite:///:memory:", echo=True)
     SQLModel.metadata.create_all(engine)
     session = Session(engine)
+    # Don't need this bc sqlite lives and dies in memory
+    # But trying to drill home the concept
     try:
         yield session
     except Exception:
@@ -20,7 +20,7 @@ def get_session():
         session.close()
 
 
-def test_create_snippet(get_session):
+def test_saving_snippet_orm_to_database(get_session):
     snippet = SnippetORM(
         title="Test Snippet",
         code="print('foo')",
@@ -32,9 +32,10 @@ def test_create_snippet(get_session):
         session.refresh(snippet)
     assert snippet.title == "Test Snippet"
     assert snippet.code == "print('foo')"
+    assert snippet.id is not None
 
 
-def test_snippet_validation():
+def test_snippet_create_validation():
     with pytest.raises(ValueError) as exception:
         SnippetCreate(
             title="Test Snippet",

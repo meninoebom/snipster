@@ -3,12 +3,22 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from src.snipster.models import Language, SnippetCreate, SnippetORM
 
+# TODO: Is this missing tests for SnippetPublic?
+# TODO: Should this be called test_models.py?
+
 
 @pytest.fixture(scope="function")
 def get_session():
     engine = create_engine("sqlite:///:memory:", echo=True)
     SQLModel.metadata.create_all(engine)
-    return Session(engine)
+    session = Session(engine)
+    try:
+        yield session
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 def test_create_snippet(get_session):

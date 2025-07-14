@@ -4,7 +4,6 @@ from sqlmodel import Session, SQLModel, create_engine
 from src.snipster.models import Language, SnippetCreate, SnippetORM
 
 # TODO: Is this missing tests for SnippetPublic?
-# TODO: Should this be called test_models.py?
 
 
 @pytest.fixture(scope="function")

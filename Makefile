@@ -4,7 +4,7 @@ test:
 
 .PHONY: run
 run:
-	uv run python -m src.snipster.main
+	uv run python -m src.snipster
 
 .PHONY: lint
 lint:

@@ -3,21 +3,21 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from src.snipster.models import Language, SnippetCreate, SnippetORM
 
-engine = create_engine("sqlite:///:memory:", echo=True)
 
-
-@pytest.fixture(scope="module", autouse=True)
-def setup_database():
+@pytest.fixture(scope="function")
+def get_session():
+    engine = create_engine("sqlite:///:memory:", echo=True)
     SQLModel.metadata.create_all(engine)
+    return Session(engine)
 
 
-def test_create_snippet():
+def test_create_snippet(get_session):
     snippet = SnippetORM(
         title="Test Snippet",
         code="print('foo')",
         language=Language.PYTHON,
     )
-    with Session(engine) as session:
+    with get_session as session:
         session.add(snippet)
         session.commit()
         session.refresh(snippet)

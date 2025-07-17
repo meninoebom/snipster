@@ -5,10 +5,10 @@ from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
 
-class Language(Enum):
-    JAVASCRIPT = "javascript"
-    PYTHON = "python"
-    RUST = "rust"
+class Language(str, Enum):
+    JAVASCRIPT = "js"
+    PYTHON = "py"
+    RUST = "ru"
 
 
 class SnippetBase(SQLModel, table=False):

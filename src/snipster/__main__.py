@@ -1,7 +1,5 @@
-from .db import create_db_and_tables, get_session
+from .db import get_session
 from .models import Language, SnippetORM
-
-create_db_and_tables()
 
 with get_session() as session:
     snippet = SnippetORM(

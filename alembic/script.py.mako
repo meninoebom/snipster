@@ -10,6 +10,9 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 ${imports if imports else ""}
+# Add sqlmodel import so its types are resolvable as well
+# autogenerate tends to use its types directly
+import sqlmodel
 
 # revision identifiers, used by Alembic.
 revision: str = ${repr(up_revision)}

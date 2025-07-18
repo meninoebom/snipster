@@ -1,8 +1,8 @@
 from .db import get_session
-from .models import Language, SnippetORM
+from .models import Language, Snippet
 
 with get_session() as session:
-    snippet = SnippetORM(
+    snippet = Snippet(
         title="First Snip",
         code="print('foo')",
         language=Language.PYTHON,

@@ -24,7 +24,7 @@ class SnippetBase(SQLModel, table=False):
     favorite: bool = False
 
 
-class SnippetORM(SnippetBase, table=True):
+class Snippet(SnippetBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime | None = None
@@ -33,7 +33,7 @@ class SnippetORM(SnippetBase, table=True):
         return f"{self.title} ({self.language.value})"
 
     @classmethod
-    def create_snippet(cls, **kwargs: Any) -> "SnippetORM":
+    def create_snippet(cls, **kwargs: Any) -> "Snippet":
         title = kwargs.get("title")
         if title is None or len(title) < 3:
             raise ValueError("Title must be at least 3 characters.")
@@ -45,15 +45,3 @@ class SnippetORM(SnippetBase, table=True):
 
 class SnippetCreate(SnippetBase, table=False):
     pass
-    # title: str
-    # code: str
-    # language: Language
-    # description: str | None = None
-    # tags: List[str] = Field(
-    #     default_factory=list, sa_column=Column(MutableList.as_mutable(JSON))
-    # )
-    # favorite: bool = False
-
-
-# class SnippetPublic(SnippetBase, table=False):
-#     id: int

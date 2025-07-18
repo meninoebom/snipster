@@ -1,7 +1,7 @@
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
-from src.snipster.models import Language, SnippetORM
+from src.snipster.models import Language, Snippet
 
 
 @pytest.fixture(scope="function")
@@ -21,7 +21,7 @@ def get_session():
 
 
 def test_saving_snippet_orm_to_database(get_session):
-    snippet = SnippetORM(
+    snippet = Snippet(
         title="Test Snippet",
         code="print('foo')",
         language=Language.PYTHON,
@@ -37,7 +37,7 @@ def test_saving_snippet_orm_to_database(get_session):
 
 def test_create_snippet_method_validation():
     with pytest.raises(ValueError) as exception:
-        SnippetORM.create_snippet(
+        Snippet.create_snippet(
             title="Test Snippet",
             code="_",
             language=Language.PYTHON,
@@ -45,7 +45,7 @@ def test_create_snippet_method_validation():
     assert "Code must be at least 3 characters." in str(exception.value)
 
     with pytest.raises(ValueError) as exception:
-        SnippetORM.create_snippet(
+        Snippet.create_snippet(
             title="_",
             code="print('foo')",
             language=Language.PYTHON,

@@ -6,20 +6,20 @@ from sqlalchemy import or_
 from sqlmodel import Session, select
 
 from .exceptions import SnippetNotFoundError
-from .models import SnippetCreate, SnippetORM, SnippetPublic
+from .models import SnippetCreate, SnippetORM
 
 
 class AbstractSnippetRepo(ABC):
     @abstractmethod  # pragma: no cover
-    def add(self, snippet: SnippetCreate) -> SnippetPublic | None:
+    def add(self, snippet: SnippetCreate) -> SnippetORM | None:
         pass
 
     @abstractmethod  # pragma: no cover
-    def get(self, snippet_id) -> SnippetPublic | None:
+    def get(self, snippet_id) -> SnippetORM | None:
         pass
 
     @abstractmethod  # pragma: no cover
-    def list(self) -> Sequence[SnippetPublic]:
+    def list(self) -> Sequence[SnippetORM]:
         pass
 
     @abstractmethod  # pragma: no cover
@@ -39,54 +39,30 @@ class AbstractSnippetRepo(ABC):
         pass
 
     @abstractmethod  # pragma: no cover
-    def search(self, query: str) -> Sequence[SnippetPublic]:
+    def search(self, query: str) -> Sequence[SnippetORM]:
         pass
-
-
-def to_public(orm: SnippetORM) -> SnippetPublic:
-    assert orm.id is not None
-    return SnippetPublic(
-        id=orm.id,
-        title=orm.title,
-        code=orm.code,
-        language=orm.language,
-        description=orm.description,
-        tags=orm.tags,
-        favorite=orm.favorite,
-        created_at=orm.created_at,
-        updated_at=orm.updated_at,
-    )
 
 
 class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def add(self, snippet: SnippetCreate) -> SnippetPublic:
-        snippet_orm = SnippetORM(
-            title=snippet.title,
-            code=snippet.code,
-            language=snippet.language,
-            description=snippet.description,
-            tags=snippet.tags,
-            favorite=snippet.favorite,
-            created_at=snippet.created_at,
-            updated_at=snippet.updated_at,
-        )
+    def add(self, snippet: SnippetCreate) -> SnippetORM:
+        snippet_orm = SnippetORM.create_snippet(**snippet.model_dump())
         self.session.add(snippet_orm)
         self.session.commit()
         self.session.refresh(snippet_orm)
-        return to_public(snippet_orm)
+        return snippet_orm
 
-    def get(self, snippet_id) -> SnippetPublic:
+    def get(self, snippet_id) -> SnippetORM:
         snippet_orm = self.session.get(SnippetORM, snippet_id)
         if snippet_orm:
-            return to_public(snippet_orm)
+            return snippet_orm
         raise SnippetNotFoundError
 
-    def list(self) -> Sequence[SnippetPublic]:
+    def list(self) -> Sequence[SnippetORM]:
         snippet_orms = self.session.exec(select(SnippetORM)).all()
-        return [to_public(orm) for orm in snippet_orms]
+        return [snippet for snippet in snippet_orms]
 
     def delete(self, snippet_id: int):
         snippet = self.session.get(SnippetORM, snippet_id)
@@ -121,7 +97,7 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
         self.session.commit()
         self.session.refresh(snippet)
 
-    def search(self, query: str) -> Sequence[SnippetPublic]:
+    def search(self, query: str) -> Sequence[SnippetORM]:
         stmt = select(SnippetORM).where(
             or_(
                 SnippetORM.title.ilike(f"%{query}%"),  # type: ignore
@@ -139,38 +115,32 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
         results = {
             s.id: s for s in list(string_search_results) + tag_search_results
         }.values()
-        return [to_public(orm) for orm in results]
+        return [snippet for snippet in results]
 
 
 class InMemorySnippetRepo(AbstractSnippetRepo):
     def __init__(self):
-        self.snippets: dict[int, SnippetPublic] = {}
+        self.snippets: dict[int, SnippetORM] = {}
         self._next_id = 1
 
-    def add(self, snippet: SnippetCreate) -> SnippetPublic:
-        snippet_public = SnippetPublic(
+    def add(self, snippet: SnippetCreate) -> SnippetORM:
+        stored_snippet = SnippetORM.create_snippet(
+            **snippet.model_dump(),
             id=self._next_id,
-            title=snippet.title,
-            code=snippet.code,
-            language=snippet.language,
-            tags=snippet.tags,
-            favorite=snippet.favorite,
-            description=snippet.description,
-            created_at=snippet.created_at or datetime.now(timezone.utc),
-            # mimicing auto update by the database
-            updated_at=datetime.now(timezone.utc),
+            created_at=datetime.now(timezone.utc),
+            updated_at=None,
         )
-        self.snippets[self._next_id] = snippet_public
+        self.snippets[self._next_id] = stored_snippet
         self._next_id += 1
-        return snippet_public
+        return stored_snippet
 
-    def get(self, snippet_id: int) -> SnippetPublic:
+    def get(self, snippet_id: int) -> SnippetORM:
         snippet = self.snippets.get(snippet_id)
         if not snippet:
             raise SnippetNotFoundError
         return snippet
 
-    def list(self) -> Sequence[SnippetPublic]:
+    def list(self) -> Sequence[SnippetORM]:
         return list(self.snippets.values())
 
     def delete(self, snippet_id: int) -> None:
@@ -197,7 +167,7 @@ class InMemorySnippetRepo(AbstractSnippetRepo):
             raise ValueError(f"Tag {tag} not found on snippet with id {snippet_id}.")
         snippet.tags.remove(tag)
 
-    def search(self, query: str) -> Sequence[SnippetPublic]:
+    def search(self, query: str) -> Sequence[SnippetORM]:
         query = query.lower()
         results = []
         for snippet in self.snippets.values():

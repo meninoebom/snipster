@@ -4,7 +4,7 @@ import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
 from src.snipster.exceptions import SnippetNotFoundError
-from src.snipster.models import Language, SnippetCreate, SnippetPublic
+from src.snipster.models import Language, SnippetCreate, SnippetORM
 from src.snipster.repo import DatabaseBackedSnippetRepo, InMemorySnippetRepo
 
 # =============================================================================
@@ -101,7 +101,7 @@ def test_in_memory_repo_add(snippet, im_repo):
     assert stored_snippet.title == snippet.title
     assert stored_snippet.code == snippet.code
     assert stored_snippet.language == snippet.language
-    assert isinstance(stored_snippet, SnippetPublic)
+    assert isinstance(stored_snippet, SnippetORM)
 
 
 def test_in_memory_repo_get(snippet, im_repo):
@@ -194,7 +194,7 @@ def test_db_repo_add(db_repo, snippet):
     assert stored_snippet.title == snippet.title
     assert stored_snippet.code == snippet.code
     assert stored_snippet.language == snippet.language
-    assert isinstance(stored_snippet, SnippetPublic)
+    assert isinstance(stored_snippet, SnippetORM)
 
 
 def test_db_repo_get(db_repo, snippet):

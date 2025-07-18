@@ -48,21 +48,21 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
         self.session = session
 
     def add(self, snippet: SnippetCreate) -> Snippet:
-        snippet_orm = Snippet.create_snippet(**snippet.model_dump())
-        self.session.add(snippet_orm)
+        snippet = Snippet.create_snippet(**snippet.model_dump())
+        self.session.add(snippet)
         self.session.commit()
-        self.session.refresh(snippet_orm)
-        return snippet_orm
+        self.session.refresh(snippet)
+        return snippet
 
     def get(self, snippet_id) -> Snippet:
-        snippet_orm = self.session.get(Snippet, snippet_id)
-        if snippet_orm:
-            return snippet_orm
+        snippet = self.session.get(Snippet, snippet_id)
+        if snippet:
+            return snippet
         raise SnippetNotFoundError
 
     def list(self) -> Sequence[Snippet]:
-        snippet_orms = self.session.exec(select(Snippet)).all()
-        return [snippet for snippet in snippet_orms]
+        snippets = self.session.exec(select(Snippet)).all()
+        return [snippet for snippet in snippets]
 
     def delete(self, snippet_id: int):
         snippet = self.session.get(Snippet, snippet_id)

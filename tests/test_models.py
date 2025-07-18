@@ -20,7 +20,7 @@ def get_session():
         session.close()
 
 
-def test_saving_snippet_orm_to_database(get_session):
+def test_saving_snippet_to_database(get_session):
     snippet = Snippet(
         title="Test Snippet",
         code="print('foo')",

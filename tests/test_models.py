@@ -1,23 +1,6 @@
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
 
 from src.snipster.models import Language, Snippet
-
-
-@pytest.fixture(scope="function")
-def get_session():
-    engine = create_engine("sqlite:///:memory:", echo=True)
-    SQLModel.metadata.create_all(engine)
-    session = Session(engine)
-    # Don't need this bc sqlite lives and dies in memory
-    # But trying to drill home the concept
-    try:
-        yield session
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
 
 
 def test_saving_snippet_to_database(get_session):

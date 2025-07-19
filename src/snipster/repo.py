@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import Sequence
 
+from rapidfuzz import process
 from sqlalchemy import or_
 from sqlmodel import Session, select
 
@@ -48,11 +49,11 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
         self.session = session
 
     def add(self, snippet: SnippetCreate) -> Snippet:
-        snippet = Snippet.create_snippet(**snippet.model_dump())
-        self.session.add(snippet)
+        stored_snippet = Snippet.create_snippet(**snippet.model_dump())
+        self.session.add(stored_snippet)
         self.session.commit()
-        self.session.refresh(snippet)
-        return snippet
+        self.session.refresh(stored_snippet)
+        return stored_snippet
 
     def get(self, snippet_id) -> Snippet:
         snippet = self.session.get(Snippet, snippet_id)
@@ -116,6 +117,17 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
             s.id: s for s in list(string_search_results) + tag_search_results
         }.values()
         return [snippet for snippet in results]
+
+    def fuzzy_search(self, query: str) -> Sequence[Snippet]:
+        all_snippets = self.session.exec(select(Snippet)).all()
+        titles = [snippet.title for snippet in all_snippets]
+        matches = process.extract(query, titles, limit=len(titles), score_cutoff=70)
+        results = [
+            snippet
+            for snippet in all_snippets
+            if snippet.title in [m[0] for m in matches]
+        ]
+        return results
 
 
 class InMemorySnippetRepo(AbstractSnippetRepo):
@@ -186,3 +198,13 @@ class InMemorySnippetRepo(AbstractSnippetRepo):
             if hit:
                 results.append(snippet)
         return list(results)
+
+    def fuzzy_search(self, query: str) -> Sequence[Snippet]:
+        titles = [snippet.title for snippet in self.snippets.values()]
+        matches = process.extract(query, titles, limit=len(titles), score_cutoff=70)
+        results = [
+            snippet
+            for snippet in self.snippets.values()
+            if snippet.title in [m[0] for m in matches]
+        ]
+        return results

@@ -98,12 +98,136 @@ def add_search_data(repo):
     repo.add(snippet=snippet5)
 
 
-# =============================================================================
-# Repo Tests
-# =============================================================================
+def add_fuzzy_search_test_data(repo):
+    """
+    Populates repository with diverse test data for fuzzy search testing.
+    Includes various patterns to test different fuzzy matching scenarios.
+    """
+
+    # Basic exact matches
+    snippet1 = SnippetCreate(
+        title="Hello World",
+        code="print('Hello, World!')",
+        description="Basic hello world example",
+        language=Language.PYTHON,
+    )
+    repo.add(snippet=snippet1)
+
+    # Partial word matching
+    snippet2 = SnippetCreate(
+        title="Authentication Helper",
+        code="def authenticate_user(username, password):\n    return True",
+        description="Helper function for user authentication",
+        language=Language.PYTHON,
+        tags=["auth", "security"],
+    )
+    repo.add(snippet=snippet2)
+
+    # Typo-tolerant matches
+    snippet3 = SnippetCreate(
+        title="Database Connection",
+        code="import sqlite3\nconn = sqlite3.connect('db.sqlite')",
+        description="Connect to SQLite database",
+        language=Language.PYTHON,
+        tags=["database", "sqlite"],
+    )
+    repo.add(snippet=snippet3)
+
+    # Acronym matching
+    snippet4 = SnippetCreate(
+        title="HTTP Request Handler",
+        code="import requests\nresponse = requests.get('https://api.example.com')",
+        description="Make HTTP requests using requests library",
+        language=Language.PYTHON,
+        tags=["http", "api", "requests"],
+    )
+    repo.add(snippet=snippet4)
+
+    # Multi-word fuzzy matching
+    snippet5 = SnippetCreate(
+        title="File System Operations",
+        code="import os\nos.listdir('/path/to/directory')",
+        description="List files in directory",
+        language=Language.PYTHON,
+        tags=["filesystem", "files"],
+    )
+    repo.add(snippet=snippet5)
+
+    # Similar titles for ranking tests
+    snippet6 = SnippetCreate(
+        title="JSON Parser",
+        code="import json\ndata = json.loads(json_string)",
+        description="Parse JSON string into Python object",
+        language=Language.PYTHON,
+        tags=["json", "parsing"],
+    )
+    repo.add(snippet=snippet6)
+
+    snippet7 = SnippetCreate(
+        title="JSON Generator",
+        code="import json\njson_string = json.dumps(data)",
+        description="Convert Python object to JSON string",
+        language=Language.PYTHON,
+        tags=["json", "serialization"],
+    )
+    repo.add(snippet=snippet7)
+
+    # Different languages for language-specific search
+    snippet8 = SnippetCreate(
+        title="Hello World JS",
+        code="console.log('Hello, World!');",
+        description="Basic hello world in JavaScript",
+        language=Language.JAVASCRIPT,
+        tags=["basic"],
+    )
+    repo.add(snippet=snippet8)
+
+    # Long descriptions for content matching
+    snippet9 = SnippetCreate(
+        title="Data Validator",
+        code="def validate_email(email):\n    import re\n    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$'\n    return re.match(pattern, email) is not None",
+        description="Comprehensive email validation function using regular expressions to check email format compliance with RFC standards",
+        language=Language.PYTHON,
+        tags=["validation", "email", "regex"],
+    )
+    repo.add(snippet=snippet9)
+
+    # Edge cases for fuzzy matching
+    snippet10 = SnippetCreate(
+        title="Cache Manager",
+        code="class CacheManager:\n    def __init__(self):\n        self.cache = {}\n    \n    def get(self, key):\n        return self.cache.get(key)\n    \n    def set(self, key, value):\n        self.cache[key] = value",
+        description="Simple in-memory cache implementation for storing key-value pairs",
+        language=Language.PYTHON,
+        tags=["cache", "memory", "storage"],
+    )
+    repo.add(snippet=snippet10)
+
+    # Common misspellings test cases
+    snippet11 = SnippetCreate(
+        title="Configuration Loader",
+        code="import configparser\nconfig = configparser.ConfigParser()\nconfig.read('config.ini')",
+        description="Load application configuration from INI file",
+        language=Language.PYTHON,
+        tags=["config", "ini", "settings"],
+    )
+    repo.add(snippet=snippet11)
+
+    # Substring and partial matches
+    snippet12 = SnippetCreate(
+        title="String Utilities",
+        code="def capitalize_words(text):\n    return ' '.join(word.capitalize() for word in text.split())",
+        description="Utility functions for string manipulation and formatting",
+        language=Language.PYTHON,
+        tags=["string", "text", "utility"],
+    )
+    repo.add(snippet=snippet12)
+
+    # =============================================================================
+    # Repo Tests
+    # =============================================================================
 
 
-def test_in_memory_repo_add(snippet, repo):
+def test_repo_add(snippet, repo):
     # This test is incorrectly named - it's testing both in-memory and DB repos
     # due to the parametrize decorator above
     stored_snippet = repo.add(snippet)
@@ -114,7 +238,7 @@ def test_in_memory_repo_add(snippet, repo):
     assert isinstance(stored_snippet, Snippet)
 
 
-def test_in_memory_repo_get(snippet, repo):
+def test_repo_get(snippet, repo):
     stored_snippet = repo.add(snippet)
     retrieved = repo.get(stored_snippet.id)
     assert retrieved is not None
@@ -126,7 +250,7 @@ def test_in_memory_repo_get(snippet, repo):
         repo.get(9999)
 
 
-def test_in_memory_repo_list(snippet, another_snippet, repo):
+def test_repo_list(snippet, another_snippet, repo):
     repo.add(snippet)
     list = repo.list()
     assert len(list) == 1
@@ -139,7 +263,7 @@ def test_in_memory_repo_list(snippet, another_snippet, repo):
     assert len(list) == 2
 
 
-def test_in_memory_repo_delete(snippet, repo):
+def test_repo_delete(snippet, repo):
     repo.add(snippet)
     list = repo.list()
     stored_snippet = list[0]
@@ -152,7 +276,7 @@ def test_in_memory_repo_delete(snippet, repo):
         repo.get(stored_snippet.id)
 
 
-def test_in_memory_repo_toggle_favorite(snippet, repo):
+def test_repo_toggle_favorite(snippet, repo):
     stored_snippet = repo.add(snippet)
     repo.toggle_favorite(stored_snippet.id)
     updated_snippet = repo.get(stored_snippet.id)
@@ -164,7 +288,7 @@ def test_in_memory_repo_toggle_favorite(snippet, repo):
         repo.toggle_favorite(9999)
 
 
-def test_in_memory_repo_add_tag(snippet, repo):
+def test_repo_add_tag(snippet, repo):
     stored_snippet = repo.add(snippet)
     repo.add_tag(stored_snippet.id, "foo")
     assert "foo" in repo.get(stored_snippet.id).tags
@@ -174,7 +298,7 @@ def test_in_memory_repo_add_tag(snippet, repo):
         repo.add_tag(9999, "test")
 
 
-def test_in_memory_repo_remove_tag(snippet, repo):
+def test_repo_remove_tag(snippet, repo):
     stored_snippet = repo.add(snippet)
     repo.add_tag(stored_snippet.id, "test-tag")
     repo.remove_tag(stored_snippet.id, "test-tag")
@@ -185,9 +309,51 @@ def test_in_memory_repo_remove_tag(snippet, repo):
         repo.remove_tag(9999, "test-tag")
 
 
-def test_in_memory_repo_search(repo):
+def test_repo_search(repo):
     add_search_data(repo)
     assert len(repo.search("foo")) == 3
     assert len(repo.search("bar")) == 1
     assert len(repo.search("baz")) == 1
     assert len(repo.search("zap")) == 0
+
+
+def test_repo_fuzzy_search(repo):
+    # Test exact match
+    snippet1 = SnippetCreate(
+        title="Hello World",
+        code="print('Hello World')",
+        description="A simple greeting",
+        language=Language.PYTHON,
+    )
+    repo.add(snippet1)
+    results = repo.fuzzy_search("Hello World")
+    assert len(results) == 1
+    assert results[0].title == "Hello World"
+
+    # Test close match with typo
+    snippet2 = SnippetCreate(
+        title="Calculate Average",
+        code="def avg(x, y): return (x + y) / 2",
+        description="Calculate average of two numbers",
+        language=Language.PYTHON,
+    )
+    repo.add(snippet2)
+    results = repo.fuzzy_search("Calculate Averge")  # Intentional typo
+    assert len(results) == 1
+    assert results[0].title == "Calculate Average"
+
+    # Test partial match
+    snippet3 = SnippetCreate(
+        title="Parse JSON String",
+        code="json.loads(str)",
+        description="Parse JSON",
+        language=Language.PYTHON,
+    )
+    repo.add(snippet3)
+    results = repo.fuzzy_search("JSON")
+    assert len(results) == 1
+    assert results[0].title == "Parse JSON String"
+
+    # Test no match below threshold
+    results = repo.fuzzy_search("Something Completely Different")
+    assert len(results) == 0

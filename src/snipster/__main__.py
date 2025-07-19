@@ -1,10 +1,12 @@
-from .db import create_db_and_tables, get_session
-from .models import Snippet
-
-create_db_and_tables()
+from .db import get_session
+from .models import Language, SnippetORM
 
 with get_session() as session:
-    snippet = Snippet(title="First Snip", code='print("foo")')
+    snippet = SnippetORM(
+        title="First Snip",
+        code="print('foo')",
+        language=Language.PYTHON,
+    )
     session.add(snippet)
     session.commit()
     session.refresh(snippet)

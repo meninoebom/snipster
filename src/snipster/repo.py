@@ -10,36 +10,36 @@ from .exceptions import SnippetNotFoundError
 from .models import Snippet, SnippetCreate
 
 
-class AbstractSnippetRepo(ABC):
-    @abstractmethod  # pragma: no cover
+class AbstractSnippetRepo(ABC):  # pragma: no cover
+    @abstractmethod
     def add(self, snippet: SnippetCreate) -> Snippet | None:
         pass
 
-    @abstractmethod  # pragma: no cover
+    @abstractmethod
     def get(self, snippet_id) -> Snippet | None:
         pass
 
-    @abstractmethod  # pragma: no cover
+    @abstractmethod
     def list(self) -> Sequence[Snippet]:
         pass
 
-    @abstractmethod  # pragma: no cover
+    @abstractmethod
     def delete(self, snippet_id: int) -> None:
         pass
 
-    @abstractmethod  # pragma: no cover
+    @abstractmethod
     def toggle_favorite(self, snippet_id: int) -> None:
         pass
 
-    @abstractmethod  # pragma: no cover
+    @abstractmethod
     def add_tag(self, snippet_id: int, tag: str) -> None:
         pass
 
-    @abstractmethod  # pragma: no cover
+    @abstractmethod
     def remove_tag(self, snippet_id: int, tag: str) -> None:
         pass
 
-    @abstractmethod  # pragma: no cover
+    @abstractmethod
     def search(self, query: str) -> Sequence[Snippet]:
         pass
 

@@ -62,8 +62,7 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
         return snippet
 
     def list(self) -> Sequence[Snippet]:
-        snippets = self.session.exec(select(Snippet)).all()
-        return [snippet for snippet in snippets]
+        return list(self.session.exec(select(Snippet)).all())
 
     def delete(self, snippet_id: int):
         snippet = self.session.get(Snippet, snippet_id)
@@ -73,7 +72,7 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
 
     def toggle_favorite(self, snippet_id: int) -> None:
         snippet = self.session.get(Snippet, snippet_id)
-        if not snippet:
+        if snippet is None:
             raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
         snippet.favorite = not snippet.favorite
         self.session.commit()
@@ -81,7 +80,7 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
 
     def add_tag(self, snippet_id: int, tag: str) -> None:
         snippet = self.session.get(Snippet, snippet_id)
-        if not snippet:
+        if snippet is None:
             raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
         if tag not in snippet.tags:
             snippet.tags.append(tag)
@@ -90,7 +89,7 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
 
     def remove_tag(self, snippet_id: int, tag: str) -> None:
         snippet = self.session.get(Snippet, snippet_id)
-        if not snippet:
+        if snippet is None:
             raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
         if tag not in snippet.tags:
             raise ValueError(f"Tag {tag} not found on snippet with id {snippet_id}.")

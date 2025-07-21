@@ -57,9 +57,9 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
 
     def get(self, snippet_id) -> Snippet:
         snippet = self.session.get(Snippet, snippet_id)
-        if snippet:
-            return snippet
-        raise SnippetNotFoundError
+        if snippet is None:
+            raise SnippetNotFoundError
+        return snippet
 
     def list(self) -> Sequence[Snippet]:
         snippets = self.session.exec(select(Snippet)).all()

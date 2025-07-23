@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import Sequence
 
-from rapidfuzz import process
+from rapidfuzz import process as rapidfuzz_process
 from sqlalchemy import Text, cast, func, or_
 from sqlmodel import Session, select
 
@@ -112,13 +112,11 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
 
     def fuzzy_search(self, query: str) -> Sequence[Snippet]:
         all_snippets = self.session.exec(select(Snippet)).all()
-        titles = [snippet.title for snippet in all_snippets]
-        matches = process.extract(query, titles, limit=len(titles), score_cutoff=70)
-        results = [
-            snippet
-            for snippet in all_snippets
-            if snippet.title in [m[0] for m in matches]
-        ]
+        snippet_dict = {s.title: s for s in all_snippets}
+        matches = rapidfuzz_process.extract(
+            query, snippet_dict.keys(), limit=5, score_cutoff=70
+        )
+        results = [snippet_dict[m[0]] for m in matches]
         return results
 
 
@@ -192,11 +190,9 @@ class InMemorySnippetRepo(AbstractSnippetRepo):
         return list(results)
 
     def fuzzy_search(self, query: str) -> Sequence[Snippet]:
-        titles = [snippet.title for snippet in self.snippets.values()]
-        matches = process.extract(query, titles, limit=len(titles), score_cutoff=70)
-        results = [
-            snippet
-            for snippet in self.snippets.values()
-            if snippet.title in [m[0] for m in matches]
-        ]
+        snippet_dict = {s.title: s for s in self.snippets.values()}
+        matches = rapidfuzz_process.extract(
+            query, snippet_dict.keys(), limit=5, score_cutoff=70
+        )
+        results = [snippet_dict[m[0]] for m in matches]
         return results

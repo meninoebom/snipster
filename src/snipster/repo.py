@@ -1,99 +1,198 @@
 from abc import ABC, abstractmethod
+from datetime import datetime, timezone
 from typing import Sequence
 
+from rapidfuzz import process as rapidfuzz_process
+from sqlalchemy import Text, cast, func, or_
 from sqlmodel import Session, select
 
 from .exceptions import SnippetNotFoundError
-from .models import SnippetCreate, SnippetORM, SnippetPublic
+from .models import Snippet, SnippetCreate
 
 
-class AbstractSnippetRepo(ABC):
+class AbstractSnippetRepo(ABC):  # pragma: no cover
     @abstractmethod
-    def add(self, snippet: SnippetCreate) -> SnippetPublic | None:
+    def add(self, snippet: SnippetCreate) -> Snippet | None:
         pass
 
     @abstractmethod
-    def get(self, snippet_id) -> SnippetPublic | None:
+    def get(self, snippet_id) -> Snippet | None:
         pass
 
     @abstractmethod
-    def list(self) -> Sequence[SnippetPublic]:
+    def list(self) -> Sequence[Snippet]:
         pass
 
     @abstractmethod
     def delete(self, snippet_id: int) -> None:
         pass
 
+    @abstractmethod
+    def toggle_favorite(self, snippet_id: int) -> None:
+        pass
 
-def to_public(orm: SnippetORM) -> SnippetPublic:
-    assert orm.id is not None
-    return SnippetPublic(
-        id=orm.id,
-        title=orm.title,
-        code=orm.code,
-        language=orm.language,
-        description=orm.description,
-        tags=orm.tags,
-        favorite=orm.favorite,
-        created_at=orm.created_at,
-        updated_at=orm.updated_at,
-    )
+    @abstractmethod
+    def add_tag(self, snippet_id: int, tag: str) -> None:
+        pass
+
+    @abstractmethod
+    def remove_tag(self, snippet_id: int, tag: str) -> None:
+        pass
+
+    @abstractmethod
+    def search(self, query: str) -> Sequence[Snippet]:
+        pass
 
 
 class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def add(self, snippet: SnippetCreate) -> SnippetPublic:
-        snippet_orm = SnippetORM(
-            title=snippet.title, code=snippet.code, language=snippet.language
-        )
-        self.session.add(snippet_orm)
+    def add(self, snippet: SnippetCreate) -> Snippet:
+        stored_snippet = Snippet.create_snippet(**snippet.model_dump())
+        self.session.add(stored_snippet)
         self.session.commit()
-        self.session.refresh(snippet_orm)
-        return to_public(snippet_orm)
+        self.session.refresh(stored_snippet)
+        return stored_snippet
 
-    def get(self, snippet_id) -> SnippetPublic | None:
-        snippet_orm = self.session.get(SnippetORM, snippet_id)
-        if snippet_orm:
-            return to_public(snippet_orm)
-        raise SnippetNotFoundError
+    def get(self, snippet_id) -> Snippet:
+        snippet = self.session.get(Snippet, snippet_id)
+        if snippet is None:
+            raise SnippetNotFoundError
+        return snippet
 
-    def list(self) -> Sequence[SnippetPublic]:
-        snippet_orms = self.session.exec(select(SnippetORM)).all()
-        return [to_public(orm) for orm in snippet_orms]
+    def list(self) -> Sequence[Snippet]:
+        return list(self.session.exec(select(Snippet)).all())
 
     def delete(self, snippet_id: int):
-        snippet = self.session.get(SnippetORM, snippet_id)
+        snippet = self.session.get(Snippet, snippet_id)
         if snippet:
             self.session.delete(snippet)
             self.session.commit()
 
+    def toggle_favorite(self, snippet_id: int) -> None:
+        snippet = self.session.get(Snippet, snippet_id)
+        if snippet is None:
+            raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
+        snippet.favorite = not snippet.favorite
+        self.session.commit()
+        self.session.refresh(snippet)
+
+    def add_tag(self, snippet_id: int, tag: str) -> None:
+        snippet = self.session.get(Snippet, snippet_id)
+        if snippet is None:
+            raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
+        if tag not in snippet.tags:
+            snippet.tags.append(tag)
+            self.session.commit()
+            self.session.refresh(snippet)
+
+    def remove_tag(self, snippet_id: int, tag: str) -> None:
+        snippet = self.session.get(Snippet, snippet_id)
+        if snippet is None:
+            raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
+        if tag not in snippet.tags:
+            raise ValueError(f"Tag {tag} not found on snippet with id {snippet_id}.")
+        snippet.tags.remove(tag)
+        self.session.commit()
+        self.session.refresh(snippet)
+
+    def search(self, query: str) -> Sequence[Snippet]:
+        stmt = select(Snippet).where(
+            or_(
+                Snippet.title.ilike(f"%{query}%"),  # type: ignore
+                Snippet.code.ilike(f"%{query}%"),  # type: ignore
+                Snippet.description.ilike(f"%{query}%"),  # type: ignore
+                # TODO: Rewrite this when implementing Postgres
+                cast(func.json_extract(Snippet.tags, "$"), Text).ilike(f'%"{query}"%'),
+            )
+        )
+        results = self.session.exec(stmt).all()
+        return [snippet for snippet in results]
+
+    def fuzzy_search(self, query: str) -> Sequence[Snippet]:
+        all_snippets = self.session.exec(select(Snippet)).all()
+        snippet_dict = {s.title: s for s in all_snippets}
+        matches = rapidfuzz_process.extract(
+            query, snippet_dict.keys(), limit=5, score_cutoff=70
+        )
+        results = [snippet_dict[m[0]] for m in matches]
+        return results
+
 
 class InMemorySnippetRepo(AbstractSnippetRepo):
     def __init__(self):
-        self.snippets: dict[int, SnippetPublic] = {}
+        self.snippets: dict[int, Snippet] = {}
         self._next_id = 1
 
-    def add(self, snippet: SnippetCreate) -> SnippetPublic:
-        snippet_public = SnippetPublic(
+    def add(self, snippet: SnippetCreate) -> Snippet:
+        stored_snippet = Snippet.create_snippet(
+            **snippet.model_dump(),
             id=self._next_id,
-            title=snippet.title,
-            code=snippet.code,
-            language=snippet.language,
+            created_at=datetime.now(timezone.utc),
+            updated_at=None,
         )
-        self.snippets[self._next_id] = snippet_public
+        self.snippets[self._next_id] = stored_snippet
         self._next_id += 1
-        return snippet_public
+        return stored_snippet
 
-    def get(self, snippet_id: int) -> SnippetPublic | None:
+    def get(self, snippet_id: int) -> Snippet:
         snippet = self.snippets.get(snippet_id)
         if not snippet:
             raise SnippetNotFoundError
         return snippet
 
-    def list(self) -> Sequence[SnippetPublic]:
+    def list(self) -> Sequence[Snippet]:
         return list(self.snippets.values())
 
     def delete(self, snippet_id: int) -> None:
         self.snippets.pop(snippet_id, None)
+
+    def toggle_favorite(self, snippet_id: int) -> None:
+        snippet = self.snippets.get(snippet_id)
+        if not snippet:
+            raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
+        snippet.favorite = not snippet.favorite
+
+    def add_tag(self, snippet_id: int, tag: str) -> None:
+        snippet = self.snippets.get(snippet_id)
+        if not snippet:
+            raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
+        if tag not in snippet.tags:
+            snippet.tags.append(tag)
+
+    def remove_tag(self, snippet_id: int, tag: str) -> None:
+        snippet = self.snippets.get(snippet_id)
+        if not snippet:
+            raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
+        if tag not in snippet.tags:
+            raise ValueError(f"Tag {tag} not found on snippet with id {snippet_id}.")
+        snippet.tags.remove(tag)
+
+    def search(self, query: str) -> Sequence[Snippet]:
+        query = query.lower()
+        results = []
+        for snippet in self.snippets.values():
+            hit = False
+            if query in snippet.title.lower():
+                hit = True
+            if query in snippet.code.lower():
+                hit = True
+            if snippet.description:
+                if query in snippet.description.lower():
+                    hit = True
+            if len(snippet.tags) > 0:
+                print(snippet.tags)
+                if query in snippet.tags:
+                    hit = True
+            if hit:
+                results.append(snippet)
+        return list(results)
+
+    def fuzzy_search(self, query: str) -> Sequence[Snippet]:
+        snippet_dict = {s.title: s for s in self.snippets.values()}
+        matches = rapidfuzz_process.extract(
+            query, snippet_dict.keys(), limit=5, score_cutoff=70
+        )
+        results = [snippet_dict[m[0]] for m in matches]
+        return results

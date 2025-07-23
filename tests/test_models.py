@@ -1,27 +1,10 @@
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
 
-from src.snipster.models import Language, SnippetCreate, SnippetORM
-
-
-@pytest.fixture(scope="function")
-def get_session():
-    engine = create_engine("sqlite:///:memory:", echo=True)
-    SQLModel.metadata.create_all(engine)
-    session = Session(engine)
-    # Don't need this bc sqlite lives and dies in memory
-    # But trying to drill home the concept
-    try:
-        yield session
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+from src.snipster.models import Language, Snippet
 
 
-def test_saving_snippet_orm_to_database(get_session):
-    snippet = SnippetORM(
+def test_saving_snippet_to_database(get_session):
+    snippet = Snippet(
         title="Test Snippet",
         code="print('foo')",
         language=Language.PYTHON,
@@ -35,9 +18,9 @@ def test_saving_snippet_orm_to_database(get_session):
     assert snippet.id is not None
 
 
-def test_snippet_create_validation():
+def test_create_snippet_method_validation():
     with pytest.raises(ValueError) as exception:
-        SnippetCreate(
+        Snippet.create_snippet(
             title="Test Snippet",
             code="_",
             language=Language.PYTHON,
@@ -45,7 +28,7 @@ def test_snippet_create_validation():
     assert "Code must be at least 3 characters." in str(exception.value)
 
     with pytest.raises(ValueError) as exception:
-        SnippetCreate(
+        Snippet.create_snippet(
             title="_",
             code="print('foo')",
             language=Language.PYTHON,

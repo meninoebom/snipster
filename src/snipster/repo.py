@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Sequence
 
 from rapidfuzz import process
-from sqlalchemy import or_
+from sqlalchemy import Text, cast, func, or_
 from sqlmodel import Session, select
 
 from .exceptions import SnippetNotFoundError
@@ -103,18 +103,11 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
                 Snippet.title.ilike(f"%{query}%"),  # type: ignore
                 Snippet.code.ilike(f"%{query}%"),  # type: ignore
                 Snippet.description.ilike(f"%{query}%"),  # type: ignore
+                # TODO: Rewrite this when implementing Postgres
+                cast(func.json_extract(Snippet.tags, "$"), Text).ilike(f'%"{query}"%'),
             )
         )
-        string_search_results = self.session.exec(stmt).all()
-
-        all_snippets = self.session.exec(select(Snippet)).all()
-        tag_search_results = [
-            snippet for snippet in all_snippets if query in snippet.tags
-        ]
-
-        results = {
-            s.id: s for s in list(string_search_results) + tag_search_results
-        }.values()
+        results = self.session.exec(stmt).all()
         return [snippet for snippet in results]
 
     def fuzzy_search(self, query: str) -> Sequence[Snippet]:

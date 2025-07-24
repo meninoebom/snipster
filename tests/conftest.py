@@ -24,6 +24,7 @@ def get_session():
         raise
     finally:
         session.close()
+        engine.dispose()
 
 
 # =============================================================================
@@ -47,6 +48,7 @@ def db_repo() -> Generator[DatabaseBackedSnippetRepo, None, None]:
         yield DatabaseBackedSnippetRepo(session=session)
     finally:
         session.close()
+        engine.dispose()
 
 
 @pytest.fixture(params=["im_repo", "db_repo"])

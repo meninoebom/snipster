@@ -9,6 +9,7 @@ def list():
 
 
 @app.command()
+# argumenst + title, code, description
 def add():
     print("add")
 

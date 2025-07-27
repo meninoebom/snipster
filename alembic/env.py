@@ -1,13 +1,15 @@
 import os
 from logging.config import fileConfig
 
+from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 
+# Import the models module itself to register SQLModel classes
 from alembic import context
 
-# Must import something from file where models are stored
-# for proper module resolution in autogenerate
+load_dotenv()
+
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///snipster.sqlite")
 

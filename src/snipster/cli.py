@@ -83,31 +83,39 @@ def add(
     )
     repo.add(snippet)
 
-    @app.command()
-    def list():
-        """
-        List all snippets
-        """
-        print("list")
 
-    @app.command()
-    def toggle_favorite():
-        print("favorite")
+@app.command()
+def list(ctx: typer.Context):
+    """
+    List all snippets
+    """
+    repo = ctx.obj
+    snippets = repo.list()
+    for snippet in snippets:
+        print(snippet.__str__())
 
-    @app.command()
-    def search(
-        query: Annotated[
-            str,
-            typer.Argument(help="Search for snippets by title, description, or tags"),
-        ],
-    ):
-        print(f"searching for {query}")
 
-    @app.command()
-    def delete(
-        id: Annotated[int, typer.Argument(help="The ID of the snippet to delete")],
-    ):
-        print(f"deleting snipper with id{id}")
+@app.command()
+def toggle_favorite():
+    print("favorite")
 
-    if __name__ == "__main__":
-        app()
+
+@app.command()
+def search(
+    query: Annotated[
+        str,
+        typer.Argument(help="Search for snippets by title, description, or tags"),
+    ],
+):
+    print(f"searching for {query}")
+
+
+@app.command()
+def delete(
+    id: Annotated[int, typer.Argument(help="The ID of the snippet to delete")],
+):
+    print(f"deleting snipper with id{id}")
+
+
+if __name__ == "__main__":
+    app()

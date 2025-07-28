@@ -91,30 +91,48 @@ def list(ctx: typer.Context):
     """
     repo = ctx.obj
     snippets = repo.list()
-    for snippet in snippets:
+    sorted_list = sorted(snippets, key=lambda x: x.id)
+    for snippet in sorted_list:
         print(snippet.__str__())
 
 
 @app.command()
-def toggle_favorite():
-    print("favorite")
+def toggle_favorite(ctx: typer.Context, id: Annotated[int, typer.Argument]):
+    repo = ctx.obj
+    repo.toggle_favorite(id)
+    snippet = repo.get(id)
+    if snippet.favorite:
+        print(f"Favorted: {snippet.__str__()}")
+    else:
+        print(f"Unfavorted: {snippet.__str__()}")
 
 
 @app.command()
 def search(
+    ctx: typer.Context,
     query: Annotated[
         str,
         typer.Argument(help="Search for snippets by title, description, or tags"),
     ],
 ):
-    print(f"searching for {query}")
+    repo = ctx.obj
+    snippets = repo.search(query)
+    for snippet in snippets:
+        print(snippet.__str__())
 
 
 @app.command()
 def delete(
+    ctx: typer.Context,
     id: Annotated[int, typer.Argument(help="The ID of the snippet to delete")],
 ):
-    print(f"deleting snipper with id{id}")
+    repo = ctx.obj
+    try:
+        repo.delete(id)
+    except Exception:
+        print(f"No snippet with id #{id} exists")
+    else:
+        print(f"Deleted snippet with id #{id}")
 
 
 if __name__ == "__main__":

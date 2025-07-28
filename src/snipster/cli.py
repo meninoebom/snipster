@@ -34,7 +34,8 @@ app = typer.Typer()
 @app.callback(invoke_without_command=True)
 def setup(ctx: typer.Context):
     session = Session(engine)
-    ctx.obj = db_repo(session=session)
+    console = Console()
+    ctx.obj = {"repo": db_repo(session=session), "console": console}
 
     atexit.register(session.close)
 
@@ -47,8 +48,8 @@ def get(
     """
     Get and display a snippet by its ID.
     """
-    repo = ctx.obj
-    console = Console()
+    repo = ctx.obj["repo"]
+    console = ctx.obj["console"]
 
     try:
         snippet = repo.get(snippet_id)
@@ -120,7 +121,7 @@ def add(
     """
     Add a new code snippet to the repository.
     """
-    repo = ctx.obj
+    repo = ctx.obj["repo"]
     enum_map = {
         "python": ModelLanguageEnum["PYTHON"],
         "javascript": ModelLanguageEnum["JAVASCRIPT"],
@@ -140,8 +141,8 @@ def list(ctx: typer.Context):
     """
     List all snippets
     """
-    repo = ctx.obj
-    console = Console()
+    repo = ctx.obj["repo"]
+    console = ctx.obj["console"]
     snippets = repo.list()
     sorted_list = sorted(snippets, key=lambda x: x.id)
     for snippet in sorted_list:
@@ -150,8 +151,8 @@ def list(ctx: typer.Context):
 
 @app.command()
 def toggle_favorite(ctx: typer.Context, id: Annotated[int, typer.Argument]):
-    repo = ctx.obj
-    console = Console()
+    repo = ctx.obj["repo"]
+    console = ctx.obj["console"]
     repo.toggle_favorite(id)
     snippet = repo.get(id)
     if snippet.favorite:
@@ -168,8 +169,8 @@ def search(
         typer.Argument(help="Search for snippets by title, description, or tags"),
     ],
 ):
-    repo = ctx.obj
-    console = Console()
+    repo = ctx.obj["repo"]
+    console = ctx.obj["console"]
     snippets = repo.search(query)
     sorted_list = sorted(snippets, key=lambda x: x.id)
     for snippet in sorted_list:
@@ -181,8 +182,8 @@ def delete(
     ctx: typer.Context,
     id: Annotated[int, typer.Argument(help="The ID of the snippet to delete")],
 ):
-    repo = ctx.obj
-    console = Console()
+    repo = ctx.obj["repo"]
+    console = ctx.obj["console"]
     try:
         repo.delete(id)
     except Exception:

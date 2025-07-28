@@ -4,9 +4,14 @@ from enum import Enum
 
 import typer
 from dotenv import load_dotenv
+from rich.console import Console
+from rich.panel import Panel
+from rich.syntax import Syntax
+from rich.text import Text
 from sqlmodel import Session, create_engine
 from typing_extensions import Annotated
 
+from .exceptions import SnippetNotFoundError
 from .models import Language as ModelLanguageEnum
 from .models import Snippet
 from .repo import DatabaseBackedSnippetRepo as db_repo
@@ -32,6 +37,52 @@ def setup(ctx: typer.Context):
     ctx.obj = db_repo(session=session)
 
     atexit.register(session.close)
+
+
+@app.command()
+def get(
+    ctx: typer.Context,
+    snippet_id: Annotated[int, typer.Argument(help="ID of the snippet to retrieve")],
+):
+    """
+    Get and display a snippet by its ID.
+    """
+    repo = ctx.obj
+    console = Console()
+
+    try:
+        snippet = repo.get(snippet_id)
+
+        title = Text(f"{snippet.title} ")
+        if snippet.favorite:
+            title.append("⭐️", style="yellow")
+
+        description_panel = None
+        if snippet.description:
+            description_panel = Panel(
+                snippet.description, title="Description", border_style="blue"
+            )
+
+        code = Syntax(
+            snippet.code,
+            snippet.language.value,
+            theme="monokai",
+            line_numbers=True,
+            word_wrap=True,
+        )
+
+        console.print()
+        console.print(title, style="bold blue")
+        if description_panel:
+            console.print(description_panel)
+        console.print(code)
+        console.print(f"\nTags: {', '.join(snippet.tags)}" if snippet.tags else "")
+
+    except Exception as e:
+        if isinstance(e, SnippetNotFoundError):
+            console.print(f"[red]Error: Snippet with ID {snippet_id} not found.[/red]")
+        else:
+            console.print(f"[red]Error: {str(e)}[/red]")
 
 
 @app.command()
@@ -90,21 +141,23 @@ def list(ctx: typer.Context):
     List all snippets
     """
     repo = ctx.obj
+    console = Console()
     snippets = repo.list()
     sorted_list = sorted(snippets, key=lambda x: x.id)
     for snippet in sorted_list:
-        print(snippet.__str__())
+        console.print(snippet.__str__())
 
 
 @app.command()
 def toggle_favorite(ctx: typer.Context, id: Annotated[int, typer.Argument]):
     repo = ctx.obj
+    console = Console()
     repo.toggle_favorite(id)
     snippet = repo.get(id)
     if snippet.favorite:
-        print(f"Favorted: {snippet.__str__()}")
+        console.print(f"Favorted: {snippet.__str__()}")
     else:
-        print(f"Unfavorted: {snippet.__str__()}")
+        console.print(f"Unfavorted: {snippet.__str__()}")
 
 
 @app.command()
@@ -116,9 +169,11 @@ def search(
     ],
 ):
     repo = ctx.obj
+    console = Console()
     snippets = repo.search(query)
-    for snippet in snippets:
-        print(snippet.__str__())
+    sorted_list = sorted(snippets, key=lambda x: x.id)
+    for snippet in sorted_list:
+        console.print(snippet.__str__())
 
 
 @app.command()
@@ -127,12 +182,13 @@ def delete(
     id: Annotated[int, typer.Argument(help="The ID of the snippet to delete")],
 ):
     repo = ctx.obj
+    console = Console()
     try:
         repo.delete(id)
     except Exception:
-        print(f"No snippet with id #{id} exists")
+        console.print(f"No snippet with id #{id} exists")
     else:
-        print(f"Deleted snippet with id #{id}")
+        console.print(f"Deleted snippet with id #{id}")
 
 
 if __name__ == "__main__":

@@ -1,10 +1,23 @@
+import atexit
+import os
 from enum import Enum
 
 import typer
+from dotenv import load_dotenv
+from sqlmodel import Session, create_engine
 from typing_extensions import Annotated
 
+from .models import Language as ModelLanguageEnum
+from .models import Snippet
+from .repo import DatabaseBackedSnippetRepo as db_repo
 
-class Language(str, Enum):
+load_dotenv()
+
+db_url = os.getenv("DATABASE_URL", "sqlite:///snipster.sqlite")
+engine = create_engine(db_url)
+
+
+class LanguageEnum(str, Enum):
     javascript = "javascript"
     python = "python"
     rust = "rust"
@@ -13,14 +26,23 @@ class Language(str, Enum):
 app = typer.Typer()
 
 
+@app.callback(invoke_without_command=True)
+def setup(ctx: typer.Context):
+    session = Session(engine)
+    ctx.obj = db_repo(session=session)
+
+    atexit.register(session.close)
+
+
 @app.command()
 def add(
+    ctx: typer.Context,
     title: Annotated[
         str, typer.Option(..., "--title", "-t", help="Title of the snippet")
     ],
     code: Annotated[str, typer.Option(..., "--code", "-c", help="The snippet code")],
     language: Annotated[
-        Language,
+        LanguageEnum,
         typer.Option(
             ...,
             "--language",
@@ -47,10 +69,19 @@ def add(
     """
     Add a new code snippet to the repository.
     """
-    print(f"title = {title}")
-    print(f"code = {code}")
-    print(f"description = {description}")
-    print(f"language = {language}")
+    repo = ctx.obj
+    enum_map = {
+        "python": ModelLanguageEnum["PYTHON"],
+        "javascript": ModelLanguageEnum["JAVASCRIPT"],
+        "rust": ModelLanguageEnum["RUST"],
+    }
+    snippet = Snippet.create_snippet(
+        title=title,
+        code=code,
+        description=description,
+        language=enum_map[LanguageEnum(language).value],
+    )
+    repo.add(snippet)
 
     @app.command()
     def list():

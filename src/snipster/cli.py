@@ -1,5 +1,3 @@
-import atexit
-import os
 from enum import Enum
 
 import typer
@@ -8,18 +6,19 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.syntax import Syntax
 from rich.text import Text
-from sqlmodel import Session, create_engine
 from typing_extensions import Annotated
 
+from .db import default_session_factory
 from .exceptions import SnippetNotFoundError
 from .models import Language as ModelLanguageEnum
-from .models import Snippet
+from .models import SnippetCreate
 from .repo import DatabaseBackedSnippetRepo as db_repo
 
 load_dotenv()
 
-db_url = os.getenv("DATABASE_URL", "sqlite:///snipster.sqlite")
-engine = create_engine(db_url)
+
+# Re-export for testing
+session_factory = default_session_factory
 
 
 class LanguageEnum(str, Enum):
@@ -33,11 +32,8 @@ app = typer.Typer()
 
 @app.callback(invoke_without_command=True)
 def setup(ctx: typer.Context):
-    session = Session(engine)
     console = Console()
-    ctx.obj = {"repo": db_repo(session=session), "console": console}
-
-    atexit.register(session.close)
+    ctx.obj = {"session_factory": session_factory, "console": console}
 
 
 @app.command()
@@ -48,42 +44,47 @@ def get(
     """
     Get and display a snippet by its ID.
     """
-    repo = ctx.obj["repo"]
+    session_factory = ctx.obj["session_factory"]
     console = ctx.obj["console"]
 
-    try:
-        snippet = repo.get(snippet_id)
+    with session_factory.get_session() as session:
+        repo = db_repo(session=session)
 
-        title = Text(f"{snippet.title} ")
-        if snippet.favorite:
-            title.append("⭐️", style="yellow")
+        try:
+            snippet = repo.get(snippet_id)
 
-        description_panel = None
-        if snippet.description:
-            description_panel = Panel(
-                snippet.description, title="Description", border_style="blue"
+            title = Text(f"{snippet.title} ")
+            if snippet.favorite:
+                title.append("⭐️", style="yellow")
+
+            description_panel = None
+            if snippet.description:
+                description_panel = Panel(
+                    snippet.description, title="Description", border_style="blue"
+                )
+
+            code = Syntax(
+                snippet.code,
+                snippet.language.value,
+                theme="monokai",
+                line_numbers=True,
+                word_wrap=True,
             )
 
-        code = Syntax(
-            snippet.code,
-            snippet.language.value,
-            theme="monokai",
-            line_numbers=True,
-            word_wrap=True,
-        )
+            console.print()
+            console.print(title, style="bold blue")
+            if description_panel:
+                console.print(description_panel)
+            console.print(code)
+            console.print(f"\nTags: {', '.join(snippet.tags)}" if snippet.tags else "")
 
-        console.print()
-        console.print(title, style="bold blue")
-        if description_panel:
-            console.print(description_panel)
-        console.print(code)
-        console.print(f"\nTags: {', '.join(snippet.tags)}" if snippet.tags else "")
-
-    except Exception as e:
-        if isinstance(e, SnippetNotFoundError):
-            console.print(f"[red]Error: Snippet with ID {snippet_id} not found.[/red]")
-        else:
-            console.print(f"[red]Error: {str(e)}[/red]")
+        except Exception as e:
+            if isinstance(e, SnippetNotFoundError):
+                console.print(
+                    f"[red]Error: Snippet with ID {snippet_id} not found.[/red]"
+                )
+            else:
+                console.print(f"[red]Error: {str(e)}[/red]")
 
 
 @app.command()
@@ -121,19 +122,24 @@ def add(
     """
     Add a new code snippet to the repository.
     """
-    repo = ctx.obj["repo"]
-    enum_map = {
-        "python": ModelLanguageEnum["PYTHON"],
-        "javascript": ModelLanguageEnum["JAVASCRIPT"],
-        "rust": ModelLanguageEnum["RUST"],
-    }
-    snippet = Snippet.create_snippet(
-        title=title,
-        code=code,
-        description=description,
-        language=enum_map[LanguageEnum(language).value],
-    )
-    repo.add(snippet)
+    session_factory = ctx.obj["session_factory"]
+    console = ctx.obj["console"]
+
+    with session_factory.get_session() as session:
+        repo = db_repo(session=session)
+        enum_map = {
+            "python": ModelLanguageEnum["PYTHON"],
+            "javascript": ModelLanguageEnum["JAVASCRIPT"],
+            "rust": ModelLanguageEnum["RUST"],
+        }
+        snippet = SnippetCreate(
+            title=title,
+            code=code,
+            description=description,
+            language=enum_map[LanguageEnum(language).value],
+        )
+        repo.add(snippet)
+        console.print(f"Added snippet: {title}")
 
 
 @app.command()
@@ -141,24 +147,30 @@ def list(ctx: typer.Context):
     """
     List all snippets
     """
-    repo = ctx.obj["repo"]
+    session_factory = ctx.obj["session_factory"]
     console = ctx.obj["console"]
-    snippets = repo.list()
-    sorted_list = sorted(snippets, key=lambda x: x.id)
-    for snippet in sorted_list:
-        console.print(snippet.__str__())
+
+    with session_factory.get_session() as session:
+        repo = db_repo(session=session)
+        snippets = repo.list()
+        sorted_list = sorted(snippets, key=lambda x: x.id or 0)
+        for snippet in sorted_list:
+            console.print(snippet.__str__())
 
 
 @app.command()
 def toggle_favorite(ctx: typer.Context, id: Annotated[int, typer.Argument]):
-    repo = ctx.obj["repo"]
+    session_factory = ctx.obj["session_factory"]
     console = ctx.obj["console"]
-    repo.toggle_favorite(id)
-    snippet = repo.get(id)
-    if snippet.favorite:
-        console.print(f"Favorted: {snippet.__str__()}")
-    else:
-        console.print(f"Unfavorted: {snippet.__str__()}")
+
+    with session_factory.get_session() as session:
+        repo = db_repo(session=session)
+        repo.toggle_favorite(id)
+        snippet = repo.get(id)
+        if snippet.favorite:
+            console.print(f"Favorted: {snippet.__str__()}")
+        else:
+            console.print(f"Unfavorted: {snippet.__str__()}")
 
 
 @app.command()
@@ -169,12 +181,15 @@ def search(
         typer.Argument(help="Search for snippets by title, description, or tags"),
     ],
 ):
-    repo = ctx.obj["repo"]
+    session_factory = ctx.obj["session_factory"]
     console = ctx.obj["console"]
-    snippets = repo.search(query)
-    sorted_list = sorted(snippets, key=lambda x: x.id)
-    for snippet in sorted_list:
-        console.print(snippet.__str__())
+
+    with session_factory.get_session() as session:
+        repo = db_repo(session=session)
+        snippets = repo.search(query)
+        sorted_list = sorted(snippets, key=lambda x: x.id or 0)
+        for snippet in sorted_list:
+            console.print(snippet.__str__())
 
 
 @app.command()
@@ -182,14 +197,16 @@ def delete(
     ctx: typer.Context,
     id: Annotated[int, typer.Argument(help="The ID of the snippet to delete")],
 ):
-    repo = ctx.obj["repo"]
+    session_factory = ctx.obj["session_factory"]
     console = ctx.obj["console"]
-    try:
-        repo.delete(id)
-    except Exception:
-        console.print(f"No snippet with id #{id} exists")
-    else:
-        console.print(f"Deleted snippet with id #{id}")
+
+    with session_factory.get_session() as session:
+        repo = db_repo(session=session)
+        try:
+            repo.delete(id)
+            console.print(f"Deleted snippet with id #{id}")
+        except Exception:
+            console.print(f"No snippet with id #{id} exists")
 
 
 if __name__ == "__main__":

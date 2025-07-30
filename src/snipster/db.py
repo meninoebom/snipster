@@ -1,5 +1,6 @@
 import os
 from contextlib import contextmanager
+from typing import Generator
 
 from dotenv import load_dotenv
 from sqlmodel import Session, create_engine
@@ -10,14 +11,41 @@ db_url = os.getenv("DATABASE_URL", "sqlite:///snipster.sqlite")
 engine = create_engine(db_url, echo=False)
 
 
-@contextmanager
-def get_session():
-    """Yield a database session, properly closing it after use."""
-    session = Session(engine)
-    try:
-        yield session
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+class SessionFactory:
+    def __init__(self, engine):
+        self.engine = engine
+        self._sessions = []  # Track sessions
+
+    def create_session(self) -> Session:
+        """Create a session without context management."""
+        session = Session(self.engine)
+        self._sessions.append(session)
+        return session
+
+    @contextmanager
+    def get_session(self) -> Generator[Session, None, None]:
+        session = Session(self.engine)
+        self._sessions.append(session)
+        try:
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+            self._sessions.remove(session)
+
+    def close_all_sessions(self):
+        """Explicitly close all tracked sessions"""
+        for session in self._sessions[
+            :
+        ]:  # Copy list to avoid modification during iteration
+            try:
+                session.close()
+            except Exception:
+                pass  # Ignore errors during cleanup
+        self._sessions.clear()
+
+
+default_session_factory = SessionFactory(engine)

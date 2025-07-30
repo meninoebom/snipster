@@ -21,7 +21,6 @@ def test_session_factory():
 
     yield factory
 
-    # Cleanup
     factory.close_all_sessions()
     test_engine.dispose()
 
@@ -48,6 +47,7 @@ def im_repo() -> InMemorySnippetRepo:
 def db_repo(test_session_factory) -> Generator[DatabaseBackedSnippetRepo, None, None]:
     """Provide a database-backed repository for testing."""
     with test_session_factory.get_session() as session:
+        # yield here to allow the SessionFactory teardown code to run (still grokking this)
         yield DatabaseBackedSnippetRepo(session=session)
 
 

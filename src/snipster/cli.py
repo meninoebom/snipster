@@ -165,12 +165,18 @@ def toggle_favorite(ctx: typer.Context, id: Annotated[int, typer.Argument]):
 
     with session_factory.get_session() as session:
         repo = db_repo(session=session)
-        repo.toggle_favorite(id)
-        snippet = repo.get(id)
-        if snippet.favorite:
-            console.print(f"Favorted: {snippet.__str__()}")
-        else:
-            console.print(f"Unfavorted: {snippet.__str__()}")
+        try:
+            repo.toggle_favorite(id)
+            snippet = repo.get(id)
+            if snippet.favorite:
+                console.print(f"Favorted: {snippet.__str__()}")
+            else:
+                console.print(f"Unfavorted: {snippet.__str__()}")
+        except Exception as e:
+            if isinstance(e, SnippetNotFoundError):
+                console.print(f"[red]Error: Snippet with ID {id} not found.[/red]")
+            else:
+                console.print(f"[red]Error: {str(e)}[/red]")
 
 
 @app.command()

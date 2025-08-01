@@ -44,7 +44,7 @@ class SessionFactory:
             try:
                 session.close()
             except Exception:
-                pass  # Ignore errors during cleanup
+                print(f"Error closing session: {session}")
         self._sessions.clear()
 
 

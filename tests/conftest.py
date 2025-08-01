@@ -29,6 +29,10 @@ def test_session_factory():
 def get_session(test_session_factory):
     """Provide a database session for tests that use SessionFactory."""
     with test_session_factory.get_session() as session:
+        # Without `yield` the with block would end immediately
+        # and session.commit() and session.close() would get called
+        # This allows the test to finish before closing the with block and
+        # then triggering teardown in the SessionFactory.get_session() method
         yield session
 
 

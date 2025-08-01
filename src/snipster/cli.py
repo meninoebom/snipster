@@ -17,8 +17,7 @@ from .repo import DatabaseBackedSnippetRepo as db_repo
 load_dotenv()
 
 
-# Re-export for testing
-session_factory = default_session_factory
+cli_session_factory = default_session_factory
 
 
 class LanguageEnum(str, Enum):
@@ -33,7 +32,7 @@ app = typer.Typer()
 @app.callback(invoke_without_command=True)
 def setup(ctx: typer.Context):
     console = Console()
-    ctx.obj = {"session_factory": session_factory, "console": console}
+    ctx.obj = {"session_factory": cli_session_factory, "console": console}
 
 
 @app.command()
@@ -169,9 +168,9 @@ def toggle_favorite(ctx: typer.Context, id: Annotated[int, typer.Argument]):
             repo.toggle_favorite(id)
             snippet = repo.get(id)
             if snippet.favorite:
-                console.print(f"Favorted: {snippet.__str__()}")
+                console.print(f"Favorited: {snippet}")
             else:
-                console.print(f"Unfavorted: {snippet.__str__()}")
+                console.print(f"Unfavorited: {snippet}")
         except Exception as e:
             if isinstance(e, SnippetNotFoundError):
                 console.print(f"[red]Error: Snippet with ID {id} not found.[/red]")

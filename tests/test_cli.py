@@ -1,34 +1,22 @@
 import pytest
 from typer.testing import CliRunner
 
-from src.snipster import cli
-from src.snipster.cli import app
+import src.snipster.cli as cli_module
+
+app = cli_module.app
 
 runner = CliRunner()
 
 
 @pytest.fixture(autouse=True)
 def setup_test_db(test_session_factory):
-    """Replace the CLI's session factory with test factory."""
-    from src.snipster import cli
-
-    # Store original session factory
-    original_session_factory = cli.default_session_factory
-
-    # Replace with test session factory
-    cli.default_session_factory = test_session_factory
-
-    yield test_session_factory
-
-    # Restore original session factory
-    cli.default_session_factory = original_session_factory
+    original = cli_module.cli_session_factory
+    cli_module.cli_session_factory = test_session_factory
+    yield
+    cli_module.cli_session_factory = original
 
 
 def test_add_snippet():
-    """Test adding a snippet via CLI."""
-    print(f"Test engine: {cli.engine}")
-    print(f"Test engine URL: {cli.engine.url}")
-
     result = runner.invoke(
         app, ["add", "--title", "Test", "--code", "print('hi')", "--language", "python"]
     )
@@ -209,7 +197,6 @@ def test_add_snippet_invalid_language_debug():
 
 def test_get_snippet():
     """Test getting a snippet via CLI."""
-    # First add a snippet
     add_result = runner.invoke(
         app,
         [
@@ -234,7 +221,6 @@ def test_get_snippet():
 
 def test_list_snippets():
     """Test listing snippets via CLI."""
-    # First add a snippet
     add_result = runner.invoke(
         app,
         [
@@ -260,7 +246,6 @@ def test_list_snippets():
 
 def test_toggle_favorite():
     """Test toggling favorite status via CLI."""
-    # First add a snippet
     add_result = runner.invoke(
         app,
         [
@@ -275,17 +260,17 @@ def test_toggle_favorite():
     )
     assert add_result.exit_code == 0
 
-    # Then toggle its favorite status (assuming it gets ID 1)
     toggle_result = runner.invoke(app, ["toggle-favorite", "1"])
     print(f"Toggle test - Exit code: {toggle_result.exit_code}")
     print(f"Toggle test - Output: {toggle_result.stdout}")
     print(f"Toggle test - Error: {toggle_result.stderr}")
     assert toggle_result.exit_code == 0
+    assert "Favorited:" in toggle_result.stdout
+    assert "Test Toggle Snippet" in toggle_result.stdout
 
 
 def test_search_snippets():
     """Test searching snippets via CLI."""
-    # First add a snippet
     add_result = runner.invoke(
         app,
         [
@@ -311,10 +296,6 @@ def test_search_snippets():
 
 def test_delete_snippet():
     """Test deleting a snippet via CLI."""
-    print(f"Delete test - Starting with engine: {cli.engine}")
-    print(f"Delete test - Engine URL: {cli.engine.url}")
-
-    # First add a snippet
     add_result = runner.invoke(
         app,
         [

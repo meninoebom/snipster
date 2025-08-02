@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Sequence
 
 from rapidfuzz import process as rapidfuzz_process
-from sqlalchemy import Text, cast, func, or_
+from sqlalchemy import Text, or_
 from sqlmodel import Session, select
 
 from .exceptions import SnippetNotFoundError
@@ -45,6 +45,9 @@ class AbstractSnippetRepo(ABC):  # pragma: no cover
 
 
 class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
+    # Good to use a single session across calls incase
+    # there are multiple operations called at call site
+    # Therefore, let the call site handle session management
     def __init__(self, session: Session) -> None:
         self.session = session
 
@@ -55,7 +58,7 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
         self.session.refresh(stored_snippet)
         return stored_snippet
 
-    def get(self, snippet_id) -> Snippet:
+    def get(self, snippet_id: int) -> Snippet:
         snippet = self.session.get(Snippet, snippet_id)
         if snippet is None:
             raise SnippetNotFoundError
@@ -66,9 +69,10 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
 
     def delete(self, snippet_id: int):
         snippet = self.session.get(Snippet, snippet_id)
-        if snippet:
-            self.session.delete(snippet)
-            self.session.commit()
+        if snippet is None:
+            raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
+        self.session.delete(snippet)
+        self.session.commit()
 
     def toggle_favorite(self, snippet_id: int) -> None:
         snippet = self.session.get(Snippet, snippet_id)
@@ -103,8 +107,8 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
                 Snippet.title.ilike(f"%{query}%"),  # type: ignore
                 Snippet.code.ilike(f"%{query}%"),  # type: ignore
                 Snippet.description.ilike(f"%{query}%"),  # type: ignore
-                # TODO: Rewrite this when implementing Postgres
-                cast(func.json_extract(Snippet.tags, "$"), Text).ilike(f'%"{query}"%'),
+                # This should work for both Sqlite and Postgres
+                Snippet.tags.cast(Text).ilike(f"%{query}%"),  # type: ignore
             )
         )
         results = self.session.exec(stmt).all()

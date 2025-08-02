@@ -1,8 +1,8 @@
-"""Create snippets table
+"""Initial migration
 
-Revision ID: 5876d34b99f0
+Revision ID: 9294fad3ea8f
 Revises:
-Create Date: 2025-07-17 17:48:05.615536
+Create Date: 2025-07-26 23:50:45.916225
 
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "5876d34b99f0"
+revision: str = "9294fad3ea8f"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None

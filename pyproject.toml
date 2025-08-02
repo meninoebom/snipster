@@ -9,13 +9,16 @@ authors = [
 requires-python = ">=3.13"
 dependencies = [
     "alembic>=1.16.4",
+    "psycopg[binary]>=3.2.9",
     "python-dotenv>=1.1.1",
     "rapidfuzz>=3.13.0",
+    "rich>=14.0.0",
     "sqlmodel>=0.0.24",
+    "typer>=0.16.0",
 ]
 
 [project.scripts]
-snipster = "snipster.__main__:main"
+snipster = "snipster.cli:app"
 
 [build-system]
 requires = ["hatchling"]

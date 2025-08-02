@@ -1,8 +1,9 @@
 from typing import Generator
 
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import SQLModel, create_engine
 
+from src.snipster.db import SessionFactory
 from src.snipster.models import Language, SnippetCreate
 from src.snipster.repo import DatabaseBackedSnippetRepo, InMemorySnippetRepo
 
@@ -12,18 +13,27 @@ from src.snipster.repo import DatabaseBackedSnippetRepo, InMemorySnippetRepo
 
 
 @pytest.fixture(scope="function")
-def get_session():
-    """Provide a database session for tests."""
-    engine = create_engine("sqlite:///:memory:", echo=True)
-    SQLModel.metadata.create_all(engine)
-    session = Session(engine)
-    try:
+def test_session_factory():
+    """Provide a SessionFactory with in-memory SQLite for tests."""
+    test_engine = create_engine("sqlite:///:memory:", echo=False)
+    SQLModel.metadata.create_all(test_engine)
+    factory = SessionFactory(test_engine)
+
+    yield factory
+
+    factory.close_all_sessions()
+    test_engine.dispose()
+
+
+@pytest.fixture(scope="function")
+def get_session(test_session_factory):
+    """Provide a database session for tests that use SessionFactory."""
+    with test_session_factory.get_session() as session:
+        # Without `yield` the with block would end immediately
+        # and session.commit() and session.close() would get called
+        # This allows the test to finish before closing the with block and
+        # then triggering teardown in the SessionFactory.get_session() method
         yield session
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
 
 
 # =============================================================================
@@ -38,20 +48,23 @@ def im_repo() -> InMemorySnippetRepo:
 
 
 @pytest.fixture(scope="function")
-def db_repo() -> Generator[DatabaseBackedSnippetRepo, None, None]:
+def db_repo(test_session_factory) -> Generator[DatabaseBackedSnippetRepo, None, None]:
     """Provide a database-backed repository for testing."""
-    engine = create_engine("sqlite:///:memory:", echo=True)
-    SQLModel.metadata.create_all(engine)
-    session = Session(engine)
-    try:
+    with test_session_factory.get_session() as session:
+        # The yield statement here is important for two reasons:
+        # 1. It allows the test to use the repo before the session is closed
+        # 2. When the test finishes, execution returns here and continues into
+        #    the SessionFactory.get_session() context manager's finally block,
+        #    which properly closes the session
         yield DatabaseBackedSnippetRepo(session=session)
-    finally:
-        session.close()
 
 
 @pytest.fixture(params=["im_repo", "db_repo"])
 def repo(request, im_repo, db_repo):
-    """Parametrized fixture that provides both repository types for testing."""
+    """
+    Parametrized fixture that provides both repository types for testing.
+    The two params serve as flags for different test runs.
+    """
     if request.param == "im_repo":
         return im_repo
     elif request.param == "db_repo":
@@ -67,7 +80,7 @@ def repo(request, im_repo, db_repo):
 def snippet() -> SnippetCreate:
     """Provide a basic Python snippet for testing."""
     return SnippetCreate(
-        title="My Snippet", code="print('stuff')", language=Language.PYTHON
+        title="My Snippet", code="print('stuff')", language=Language.python
     )
 
 
@@ -75,7 +88,7 @@ def snippet() -> SnippetCreate:
 def another_snippet() -> SnippetCreate:
     """Provide a basic JavaScript snippet for testing."""
     return SnippetCreate(
-        title="My Snippet", code="console.log('stuff')", language=Language.JAVASCRIPT
+        title="My Snippet", code="console.log('stuff')", language=Language.javascript
     )
 
 
@@ -90,7 +103,7 @@ def add_search_data(repo):
         title="Foo",
         code="print('foo')",
         description="This is a foo snippet",
-        language=Language.PYTHON,
+        language=Language.python,
     )
     repo.add(snippet=snippet1)
 
@@ -98,7 +111,7 @@ def add_search_data(repo):
         title="Bar",
         code="print('bar')",
         description="This is a bar snippet",
-        language=Language.PYTHON,
+        language=Language.python,
     )
     repo.add(snippet=snippet2)
 
@@ -106,7 +119,7 @@ def add_search_data(repo):
         title="Baz",
         code="print('baz')",
         description="This is a baz snippet",
-        language=Language.PYTHON,
+        language=Language.python,
     )
     repo.add(snippet=snippet3)
 
@@ -114,7 +127,7 @@ def add_search_data(repo):
         title="Super Foo",
         code="print('foo foo foo')",
         description="This is a foo snippet but even more so",
-        language=Language.PYTHON,
+        language=Language.python,
     )
     repo.add(snippet=snippet4)
 
@@ -122,7 +135,7 @@ def add_search_data(repo):
         title="Blah",
         code="print('blah blah blah')",
         description="This is a blah snippet",
-        language=Language.PYTHON,
+        language=Language.python,
         tags=["foo"],
     )
     repo.add(snippet=snippet5)

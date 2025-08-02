@@ -8,9 +8,9 @@ from sqlmodel import Field, SQLModel
 
 
 class Language(str, Enum):
-    JAVASCRIPT = "js"
-    PYTHON = "py"
-    RUST = "ru"
+    javascript = "javascript"
+    python = "python"
+    rust = "rust"
 
 
 class SnippetBase(SQLModel, table=False):
@@ -18,6 +18,7 @@ class SnippetBase(SQLModel, table=False):
     code: str
     language: Language
     description: str | None = None
+    # This should work for both Sqlite and Postgres
     tags: List[str] = Field(
         default_factory=list, sa_column=Column(MutableList.as_mutable(JSON))
     )
@@ -30,7 +31,7 @@ class Snippet(SnippetBase, table=True):
     updated_at: datetime | None = None
 
     def __str__(self) -> str:
-        return f"{self.title} ({self.language.value})"
+        return f"{self.id}: {self.title} ({self.language.value}) {'⭐️' if self.favorite else ''}"
 
     @classmethod
     def create_snippet(cls, **kwargs: Any) -> "Snippet":

@@ -21,7 +21,7 @@ load_dotenv()
 cli_session_factory = default_session_factory
 
 
-app = typer.Typer()
+app = typer.Typer(help="Snipster: A CLI for managing code snippets.")
 
 
 @app.callback(invoke_without_command=True)
@@ -29,6 +29,10 @@ def setup(ctx: typer.Context):
     console = Console()
     # All commands will use the same session factory (interact with the same DB)
     ctx.obj = {"session_factory": cli_session_factory, "console": console}
+    if ctx.invoked_subcommand is None:
+        typer.echo("📘 Welcome to Snipster!\n")
+        typer.echo("Use one of the following commands:")
+        typer.echo(ctx.get_help())
 
 
 @app.command()
@@ -138,6 +142,12 @@ def list(ctx: typer.Context):
 
 @app.command()
 def toggle_favorite(ctx: typer.Context, id: Annotated[int, typer.Argument]):
+    """
+    Toggle the favorite status of a snippet.
+
+    This command will mark a snippet as favorite if it's not already favorited,
+    or remove the favorite status if it's already favorited.
+    """
     session_factory = ctx.obj["session_factory"]
     console = ctx.obj["console"]
 
@@ -162,6 +172,13 @@ def search(
         typer.Argument(help="Search for snippets by title, description, or tags"),
     ],
 ):
+    """
+    Search for snippets by title, description, or tags.
+
+    This command performs a case-insensitive search across snippet titles,
+    descriptions, and tags. It will return all snippets that contain the
+    search query in any of these fields.
+    """
     session_factory = ctx.obj["session_factory"]
     console = ctx.obj["console"]
 
@@ -176,6 +193,12 @@ def delete(
     ctx: typer.Context,
     id: Annotated[int, typer.Argument(help="The ID of the snippet to delete")],
 ):
+    """
+    Delete a snippet by its ID.
+
+    This command permanently removes a snippet from the repository.
+    The deletion cannot be undone, so use this command carefully.
+    """
     session_factory = ctx.obj["session_factory"]
     console = ctx.obj["console"]
 

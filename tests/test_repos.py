@@ -106,7 +106,7 @@ def test_repo_fuzzy_search(repo):
         title="Hello World",
         code="print('Hello World')",
         description="A simple greeting",
-        language=Language.PYTHON,
+        language=Language.python,
     )
     repo.add(snippet1)
     results = repo.fuzzy_search("Hello World")
@@ -118,7 +118,7 @@ def test_repo_fuzzy_search(repo):
         title="Calculate Average",
         code="def avg(x, y): return (x + y) / 2",
         description="Calculate average of two numbers",
-        language=Language.PYTHON,
+        language=Language.python,
     )
     repo.add(snippet2)
     results = repo.fuzzy_search("Calculate Averge")  # Intentional typo
@@ -130,7 +130,7 @@ def test_repo_fuzzy_search(repo):
         title="Parse JSON String",
         code="json.loads(str)",
         description="Parse JSON",
-        language=Language.PYTHON,
+        language=Language.python,
     )
     repo.add(snippet3)
     results = repo.fuzzy_search("JSON")

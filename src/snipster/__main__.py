@@ -8,7 +8,7 @@ with default_session_factory.get_session() as session:
     snippet = Snippet(
         title="First Snip",
         code="print('foo')",
-        language=Language.PYTHON,
+        language=Language.python,
     )
     session.add(snippet)
     session.commit()

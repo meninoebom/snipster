@@ -7,7 +7,7 @@ def test_saving_snippet_to_database(get_session):
     snippet = Snippet(
         title="Test Snippet",
         code="print('foo')",
-        language=Language.PYTHON,
+        language=Language.python,
     )
     with get_session as session:
         session.add(snippet)
@@ -23,7 +23,7 @@ def test_create_snippet_method_validation():
         Snippet.create_snippet(
             title="Test Snippet",
             code="_",
-            language=Language.PYTHON,
+            language=Language.python,
         )
     assert "Code must be at least 3 characters." in str(exception.value)
 
@@ -31,6 +31,6 @@ def test_create_snippet_method_validation():
         Snippet.create_snippet(
             title="_",
             code="print('foo')",
-            language=Language.PYTHON,
+            language=Language.python,
         )
     assert "Title must be at least 3 characters." in str(exception.value)

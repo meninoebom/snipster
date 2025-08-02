@@ -1,5 +1,3 @@
-from enum import Enum
-
 import typer
 from dotenv import load_dotenv
 from rich.console import Console
@@ -11,7 +9,7 @@ from typing_extensions import Annotated
 from . import cli_snippet_service
 from .db import default_session_factory
 from .exceptions import SnippetNotFoundError
-from .models import Language as ModelLanguageEnum
+from .models import Language as LanguageEnum
 from .models import SnippetCreate
 
 load_dotenv()
@@ -21,12 +19,6 @@ load_dotenv()
 # test_session_factory fixture in tests/conftest.py. This allows tests to run quickly
 # without requiring a real database while still testing the same code paths.
 cli_session_factory = default_session_factory
-
-
-class LanguageEnum(str, Enum):
-    javascript = "javascript"
-    python = "python"
-    rust = "rust"
 
 
 app = typer.Typer()
@@ -123,16 +115,8 @@ def add(
     session_factory = ctx.obj["session_factory"]
     console = ctx.obj["console"]
 
-    enum_map = {
-        "python": ModelLanguageEnum["PYTHON"],
-        "javascript": ModelLanguageEnum["JAVASCRIPT"],
-        "rust": ModelLanguageEnum["RUST"],
-    }
     snippet = SnippetCreate(
-        title=title,
-        code=code,
-        description=description,
-        language=enum_map[LanguageEnum(language).value],
+        title=title, code=code, description=description, language=LanguageEnum(language)
     )
     cli_snippet_service.add_snippet(session_factory, snippet)
     console.print(f"Added snippet: {title}")

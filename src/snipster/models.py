@@ -8,9 +8,9 @@ from sqlmodel import Field, SQLModel
 
 
 class Language(str, Enum):
-    JAVASCRIPT = "js"
-    PYTHON = "py"
-    RUST = "ru"
+    javascript = "javascript"
+    python = "python"
+    rust = "rust"
 
 
 class SnippetBase(SQLModel, table=False):

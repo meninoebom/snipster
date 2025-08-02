@@ -80,7 +80,7 @@ def repo(request, im_repo, db_repo):
 def snippet() -> SnippetCreate:
     """Provide a basic Python snippet for testing."""
     return SnippetCreate(
-        title="My Snippet", code="print('stuff')", language=Language.PYTHON
+        title="My Snippet", code="print('stuff')", language=Language.python
     )
 
 
@@ -88,7 +88,7 @@ def snippet() -> SnippetCreate:
 def another_snippet() -> SnippetCreate:
     """Provide a basic JavaScript snippet for testing."""
     return SnippetCreate(
-        title="My Snippet", code="console.log('stuff')", language=Language.JAVASCRIPT
+        title="My Snippet", code="console.log('stuff')", language=Language.javascript
     )
 
 
@@ -103,7 +103,7 @@ def add_search_data(repo):
         title="Foo",
         code="print('foo')",
         description="This is a foo snippet",
-        language=Language.PYTHON,
+        language=Language.python,
     )
     repo.add(snippet=snippet1)
 
@@ -111,7 +111,7 @@ def add_search_data(repo):
         title="Bar",
         code="print('bar')",
         description="This is a bar snippet",
-        language=Language.PYTHON,
+        language=Language.python,
     )
     repo.add(snippet=snippet2)
 
@@ -119,7 +119,7 @@ def add_search_data(repo):
         title="Baz",
         code="print('baz')",
         description="This is a baz snippet",
-        language=Language.PYTHON,
+        language=Language.python,
     )
     repo.add(snippet=snippet3)
 
@@ -127,7 +127,7 @@ def add_search_data(repo):
         title="Super Foo",
         code="print('foo foo foo')",
         description="This is a foo snippet but even more so",
-        language=Language.PYTHON,
+        language=Language.python,
     )
     repo.add(snippet=snippet4)
 
@@ -135,7 +135,7 @@ def add_search_data(repo):
         title="Blah",
         code="print('blah blah blah')",
         description="This is a blah snippet",
-        language=Language.PYTHON,
+        language=Language.python,
         tags=["foo"],
     )
     repo.add(snippet=snippet5)

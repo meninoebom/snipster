@@ -9,7 +9,10 @@ def get_snippet(session_factory: SessionFactory, snippet_id: int) -> Snippet:
     """Get a snippet by its ID."""
     with session_factory.get_session() as session:
         repo = DatabaseBackedSnippetRepo(session=session)
-        return repo.get(snippet_id)
+        snippet = repo.get(snippet_id)
+        # Properly detach the object from the session
+        session.expunge(snippet)
+        return snippet
 
 
 def add_snippet(

@@ -48,37 +48,37 @@ def get(
 
     try:
         snippet = cli_snippet_service.get_snippet(session_factory, snippet_id)
+    except SnippetNotFoundError:
+        console.print(f"[red]Error: Snippet with ID {snippet_id} not found.[/red]")
+        raise typer.Exit(code=1)
+    except Exception as e:
+        console.print(f"[red]Unexpected error: {str(e)}[/red]")
+        raise typer.Exit(code=1)
 
-        title = Text(f"{snippet.title} ")
-        if snippet.favorite:
-            title.append("⭐️", style="yellow")
+    title = Text(f"{snippet.title} ")
+    if snippet.favorite:
+        title.append("⭐️", style="yellow")
 
-        description_panel = None
-        if snippet.description:
-            description_panel = Panel(
-                snippet.description, title="Description", border_style="blue"
-            )
-
-        code = Syntax(
-            snippet.code,
-            snippet.language.value,
-            theme="monokai",
-            line_numbers=True,
-            word_wrap=True,
+    description_panel = None
+    if snippet.description:
+        description_panel = Panel(
+            snippet.description, title="Description", border_style="blue"
         )
 
-        console.print()
-        console.print(title, style="bold blue")
-        if description_panel:
-            console.print(description_panel)
-        console.print(code)
-        console.print(f"\nTags: {', '.join(snippet.tags)}" if snippet.tags else "")
+    code = Syntax(
+        snippet.code,
+        snippet.language.value,
+        theme="monokai",
+        line_numbers=True,
+        word_wrap=True,
+    )
 
-    except Exception as e:
-        if isinstance(e, SnippetNotFoundError):
-            console.print(f"[red]Error: Snippet with ID {snippet_id} not found.[/red]")
-        else:
-            console.print(f"[red]Error: {str(e)}[/red]")
+    console.print()
+    console.print(title, style="bold blue")
+    if description_panel:
+        console.print(description_panel)
+    console.print(code)
+    console.print(f"\nTags: {', '.join(snippet.tags)}" if snippet.tags else "")
 
 
 @app.command()
@@ -157,11 +157,12 @@ def toggle_favorite(ctx: typer.Context, id: Annotated[int, typer.Argument]):
             console.print(f"Favorited: {snippet}")
         else:
             console.print(f"Unfavorited: {snippet}")
+    except SnippetNotFoundError:
+        console.print(f"[red]Error: Snippet with ID {id} not found.[/red]")
+        raise typer.Exit(code=1)
     except Exception as e:
-        if isinstance(e, SnippetNotFoundError):
-            console.print(f"[red]Error: Snippet with ID {id} not found.[/red]")
-        else:
-            console.print(f"[red]Error: {str(e)}[/red]")
+        console.print(f"[red]Unexpected error: {str(e)}[/red]")
+        raise typer.Exit(code=1)
 
 
 @app.command()
@@ -205,8 +206,12 @@ def delete(
     try:
         cli_snippet_service.delete_snippet(session_factory, id)
         console.print(f"Deleted snippet with id #{id}")
-    except Exception:
-        console.print(f"No snippet with id #{id} exists")
+    except SnippetNotFoundError:
+        console.print(f"[red]Error: Snippet with ID {id} not found.[/red]")
+        raise typer.Exit(code=1)
+    except Exception as e:
+        console.print(f"[red]Unexpected error: {str(e)}[/red]")
+        raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":

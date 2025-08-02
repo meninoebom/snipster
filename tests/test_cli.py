@@ -10,6 +10,17 @@ runner = CliRunner()
 
 @pytest.fixture(autouse=True)
 def setup_test_db(test_session_factory):
+    """Fixture to temporarily replace the CLI's session factory with a test one.
+
+    This fixture runs automatically before each test and:
+    1. Stores the original session factory
+    2. Replaces it with a test session factory that uses an in-memory SQLite database
+    3. Yields control to the test
+    4. Restores the original session factory after the test completes
+
+    Args:
+        test_session_factory: A SessionFactory fixture that provides an in-memory database
+    """
     original = cli_module.cli_session_factory
     cli_module.cli_session_factory = test_session_factory
     yield

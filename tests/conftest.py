@@ -51,13 +51,20 @@ def im_repo() -> InMemorySnippetRepo:
 def db_repo(test_session_factory) -> Generator[DatabaseBackedSnippetRepo, None, None]:
     """Provide a database-backed repository for testing."""
     with test_session_factory.get_session() as session:
-        # yield here to allow the SessionFactory teardown code to run (still grokking this)
+        # The yield statement here is important for two reasons:
+        # 1. It allows the test to use the repo before the session is closed
+        # 2. When the test finishes, execution returns here and continues into
+        #    the SessionFactory.get_session() context manager's finally block,
+        #    which properly closes the session
         yield DatabaseBackedSnippetRepo(session=session)
 
 
 @pytest.fixture(params=["im_repo", "db_repo"])
 def repo(request, im_repo, db_repo):
-    """Parametrized fixture that provides both repository types for testing."""
+    """
+    Parametrized fixture that provides both repository types for testing.
+    The two params serve as flags for different test runs.
+    """
     if request.param == "im_repo":
         return im_repo
     elif request.param == "db_repo":

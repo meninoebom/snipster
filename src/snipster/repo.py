@@ -45,6 +45,9 @@ class AbstractSnippetRepo(ABC):  # pragma: no cover
 
 
 class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
+    # Good to use a single session across calls incase
+    # there are multiple operations called at call site
+    # Therefore, let the call site handle session management
     def __init__(self, session: Session) -> None:
         self.session = session
 

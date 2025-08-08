@@ -14,15 +14,21 @@ class Language(str, Enum):
 
 
 class SnippetBase(SQLModel, table=False):
-    title: str
-    code: str
-    language: Language
-    description: str | None = None
+    title: str = Field(description="Title of the snippet", min_length=3)
+    code: str = Field(description="The actual code snippet content", min_length=3)
+    language: Language = Field(description="Programming language of the snippet")
+    description: str | None = Field(
+        default=None, description="Optional description of the snippet"
+    )
     # This should work for both Sqlite and Postgres
     tags: List[str] = Field(
-        default_factory=list, sa_column=Column(MutableList.as_mutable(JSON))
+        default_factory=list,
+        sa_column=Column(MutableList.as_mutable(JSON)),
+        description="List of tags associated with the snippet",
     )
-    favorite: bool = False
+    favorite: bool = Field(
+        default=False, description="Whether this snippet is marked as favorite"
+    )
 
 
 class Snippet(SnippetBase, table=True):

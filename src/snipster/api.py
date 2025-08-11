@@ -39,6 +39,6 @@ def get_repo(session=Depends(get_session)):
     return db_repo(session=session)
 
 
-@app.post("/create", response_model=Snippet, status_code=status.HTTP_201_CREATED)
-def create_snippet(snippet: SnippetCreate, repo=Depends(get_repo)):
+@app.post("/create", status_code=status.HTTP_201_CREATED)
+def create_snippet(snippet: SnippetCreate, repo=Depends(get_repo)) -> Snippet:
     return repo.add(snippet)

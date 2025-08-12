@@ -1,10 +1,11 @@
 import time
 from datetime import datetime
 
-from fastapi import Depends, FastAPI, status
+from fastapi import Depends, FastAPI, HTTPException, status
 from pydantic import BaseModel
 
 from .db import default_session_factory
+from .exceptions import SnippetNotFoundError
 from .models import Snippet, SnippetCreate
 from .repo import DatabaseBackedSnippetRepo as db_repo
 
@@ -47,3 +48,14 @@ def create_snippet(snippet: SnippetCreate, repo=Depends(get_repo)) -> Snippet:
 @app.get("/snippets", status_code=status.HTTP_200_OK)
 def list_snippets(repo=Depends(get_repo)) -> list[Snippet]:
     return repo.list()
+
+
+@app.get("/snippet/{snippet_id}")
+async def get_snippet(snippet_id: int, repo=Depends(get_repo)) -> Snippet:
+    try:
+        return repo.get(snippet_id)
+    except SnippetNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Snippet with id {snippet_id} not found",
+        )

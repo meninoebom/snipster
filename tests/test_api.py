@@ -231,3 +231,42 @@ def test_list_snippets(client):
         assert snippet["language"] in ["javascript", "python", "rust"]
         assert len(snippet["title"]) >= 3
         assert len(snippet["code"]) >= 3
+
+
+# =============================================================================
+# GET /snippet{id}
+# =============================================================================
+
+
+@pytest.mark.usefixtures("seed_db")
+def test_get_snippet(snippet, db_repo, client):
+    created_snippet = db_repo.add(snippet)
+    response = client.get(f"/snippet/{created_snippet.id}")
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["title"] == snippet.title
+    assert body["code"] == snippet.code
+    assert body["language"] == snippet.language
+    assert body["description"] == snippet.description
+
+
+def test_get_snippet_invalid_id(client):
+    response = client.get("/snippet/foo")
+
+    assert response.status_code == 422
+
+    detail = response.json()["detail"]
+    assert len(detail) == 1
+    assert detail[0]["type"] == "int_parsing"
+    assert detail[0]["loc"] == ["path", "snippet_id"]
+    assert "valid integer" in detail[0]["msg"]
+
+
+def test_get_snippet_missing_id(client):
+    response = client.get("/snippet/0")
+
+    assert response.status_code == 404
+
+    detail = response.json()["detail"]
+    assert detail == "Snippet with id 0 not found"

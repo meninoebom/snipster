@@ -42,3 +42,8 @@ def get_repo(session=Depends(get_session)):
 @app.post("/create", status_code=status.HTTP_201_CREATED)
 def create_snippet(snippet: SnippetCreate, repo=Depends(get_repo)) -> Snippet:
     return repo.add(snippet)
+
+
+@app.get("/snippets", status_code=status.HTTP_200_OK)
+def list_snippets(repo=Depends(get_repo)) -> list[Snippet]:
+    return repo.list()

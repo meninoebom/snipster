@@ -104,6 +104,37 @@ def another_snippet() -> SnippetCreate:
     )
 
 
+@pytest.fixture
+def sample_snippets():
+    """Define sample snippet data for tests."""
+    return [
+        {
+            "title": "Hello World",
+            "code": "print('Hello, world!')",
+            "language": "python",
+            "description": "Classic first program",
+            "tags": ["beginner", "basics"],
+            "favorite": False,
+        },
+        {
+            "title": "Array Map",
+            "code": "const doubled = arr.map(x => x * 2)",
+            "language": "javascript",
+            "description": "Double array values",
+            "tags": ["array", "functional"],
+            "favorite": True,
+        },
+        {
+            "title": "Hello Rust",
+            "code": 'fn main() { println!("Hello, Rust!"); }',
+            "language": "rust",
+            "description": "Basic Rust program",
+            "tags": ["beginner"],
+            "favorite": False,
+        },
+    ]
+
+
 # =============================================================================
 # Helper Functions
 # =============================================================================

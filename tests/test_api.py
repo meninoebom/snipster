@@ -1,38 +1,28 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from src.snipster.api import app, get_repo
-from src.snipster.models import SnippetCreate
-from src.snipster.repo import InMemorySnippetRepo
-
-client = TestClient(app)
+from src.snipster.api import app, get_session
 
 
-def get_test_repo():
-    return InMemorySnippetRepo()
+@pytest.fixture(autouse=True)
+def override_db(get_test_session):
+    app.dependency_overrides[get_session] = lambda: get_test_session
+    yield
+    app.dependency_overrides.clear()
 
 
-app.dependency_overrides[get_repo] = get_test_repo
+@pytest.fixture(scope="function")
+def client():
+    """
+    This fixture creates a new TestClient instance for each test function
+    preventing any state or side effects from previous tests
+    from affecting the current test (isolation and reliability)
+    """
+    with TestClient(app) as client:
+        yield client
 
 
-@pytest.fixture
-def invalid_snippet_factory():
-    def _create_invalid_snippet(
-        title=None, code=None, description=None, language=None, **kwargs
-    ):
-        data = {
-            "title": title or "Fake Title",
-            "code": code or "print('test')",
-            "language": language or "python",
-            "description": description or None,
-            **kwargs,
-        }
-        return SnippetCreate(**data)
-
-    return _create_invalid_snippet
-
-
-def test_create_snippet():
+def test_create_snippet(client):
     response = client.post(
         "/create",
         json={
@@ -51,7 +41,7 @@ def test_create_snippet():
     assert payload["language"] == "javascript"
 
 
-def test_create_snippet_short_title():
+def test_create_snippet_short_title(client):
     """
     Example 422 response body
     {
@@ -83,7 +73,7 @@ def test_create_snippet_short_title():
     assert error["type"] == "string_too_short"
 
 
-def test_create_snippet_short_code():
+def test_create_snippet_short_code(client):
     response = client.post(
         "/create",
         json={
@@ -103,7 +93,7 @@ def test_create_snippet_short_code():
     assert error["type"] == "string_too_short"
 
 
-def test_create_snippet_missing_title():
+def test_create_snippet_missing_title(client):
     response = client.post(
         "/create",
         json={
@@ -121,7 +111,7 @@ def test_create_snippet_missing_title():
     assert error["type"] == "missing"
 
 
-def test_create_snippet_missing_code():
+def test_create_snippet_missing_code(client):
     response = client.post(
         "/create",
         json={
@@ -139,7 +129,7 @@ def test_create_snippet_missing_code():
     assert error["type"] == "missing"
 
 
-def test_create_snippet_missing_language():
+def test_create_snippet_missing_language(client):
     response = client.post(
         "/create",
         json={
@@ -157,7 +147,7 @@ def test_create_snippet_missing_language():
     assert error["type"] == "missing"
 
 
-def test_create_snippet_invalid_language():
+def test_create_snippet_invalid_language(client):
     response = client.post(
         "/create",
         json={

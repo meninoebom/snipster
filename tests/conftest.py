@@ -1,6 +1,7 @@
 from typing import Generator
 
 import pytest
+from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, create_engine
 
 from src.snipster.db import SessionFactory
@@ -15,7 +16,18 @@ from src.snipster.repo import DatabaseBackedSnippetRepo, InMemorySnippetRepo
 @pytest.fixture(scope="function")
 def test_session_factory():
     """Provide a SessionFactory with in-memory SQLite for tests."""
-    test_engine = create_engine("sqlite:///:memory:", echo=False)
+    test_engine = create_engine(
+        "sqlite://",
+        # This allows multiple threads to use the same connection
+        # otherwise you'll get an error:
+        # "SQLite objects created in a thread can only be used in that same thread"
+        connect_args={"check_same_thread": False},
+        # StaticPool maintains a single connection shared by all threads to avoid
+        # "database is locked" errors with in-memory SQLite
+        poolclass=StaticPool,
+        # Disable SQL query logging to keep test output clean
+        echo=False,
+    )
     SQLModel.metadata.create_all(test_engine)
     factory = SessionFactory(test_engine)
 
@@ -26,7 +38,7 @@ def test_session_factory():
 
 
 @pytest.fixture(scope="function")
-def get_session(test_session_factory):
+def get_test_session(test_session_factory):
     """Provide a database session for tests that use SessionFactory."""
     with test_session_factory.get_session() as session:
         # Without `yield` the with block would end immediately

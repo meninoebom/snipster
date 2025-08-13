@@ -2,7 +2,7 @@ import time
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import Body, Depends, FastAPI, HTTPException, status
+from fastapi import Body, Depends, FastAPI, HTTPException, Query, status
 from pydantic import BaseModel
 
 from .db import default_session_factory
@@ -108,3 +108,20 @@ def add_tags(
         repo.add_tag(snippet_id, t)
 
     return repo.get(snippet_id)
+
+
+@app.get("/search")
+def search(
+    q: Annotated[
+        str,
+        Query(
+            ...,  # Required
+            min_length=3,
+            max_length=25,
+            pattern=r".*\S.*",  # Must contain non-whitespace
+            description="3-25 chars; Must contain non-whitespace",
+        ),
+    ],
+    repo=Depends(get_repo),
+):
+    return repo.fuzzy_search(q.strip().lower())

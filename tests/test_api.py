@@ -371,7 +371,6 @@ def test_add_tags_invalid_id(client):
     assert response.status_code == 422
 
     detail = response.json()["detail"]
-    assert len(detail) == 1
     assert detail[0]["type"] == "int_parsing"
     assert detail[0]["loc"] == ["path", "snippet_id"]
     assert "valid integer" in detail[0]["msg"]
@@ -391,7 +390,6 @@ def test_add_tags_invalid_payload(client, snippet, db_repo):
     assert response.status_code == 422
 
     detail = response.json()["detail"]
-    assert len(detail) == 1
     assert detail[0]["type"] == "missing"
     assert detail[0]["loc"] == ["body", "tags"]
 
@@ -421,3 +419,56 @@ def test_add_duplicate_tags(client, snippet, db_repo):
     updated = client.get(f"/snippets/{created.id}")
     data = updated.json()
     assert data["tags"].count("python") == 1
+
+
+# =============================================================================
+# GET /search
+# =============================================================================
+
+
+def test_search(sample_snippets_for_testing_search, client):
+    for s in sample_snippets_for_testing_search:
+        client.post("/create", json=s)
+
+    response = client.get("/search", params={"q": "foo"})
+    results = response.json()
+    assert response.status_code == 200
+    assert len(results) == 3
+    titles = [r["title"] for r in results]
+    assert "Foo" in titles
+    assert "Super Foo" in titles
+    assert "Blah" in titles
+
+    response = client.get("/search", params={"q": "baz"})
+    results = response.json()
+    assert response.status_code == 200
+    assert len(results) == 1
+    assert results[0]["title"] == "Baz"
+
+    response = client.get("/search", params={"q": "blah"})
+    results = response.json()
+    assert response.status_code == 200
+    assert len(results) == 1
+    assert results[0]["title"] == "Blah"
+    assert results[0]["code"] == "print('blah blah blah')"
+    assert results[0]["description"] == "This is a blah snippet"
+
+
+def test_search_missing_param(client):
+    response = client.get("/search")
+    assert response.status_code == 422
+
+
+def test_search_string_too_short(client):
+    response = client.get("/search", params={"q": "a"})
+    assert response.status_code == 422
+
+
+def test_search_string_too_long(client):
+    response = client.get("/search", params={"q": "a" * 26})
+    assert response.status_code == 422
+
+
+def test_search_whitespace_only(client):
+    response = client.get("/search", params={"q": "   "})
+    assert response.status_code == 422

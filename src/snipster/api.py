@@ -1,7 +1,8 @@
 import time
 from datetime import datetime
+from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Body, Depends, FastAPI, HTTPException, status
 from pydantic import BaseModel
 
 from .db import default_session_factory
@@ -82,3 +83,28 @@ def toggle_favorite(snippet_id: int, repo=Depends(get_repo)) -> Snippet:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Snippet with id {snippet_id} not found",
         )
+
+
+class TagsPayload(BaseModel):
+    tags: list[str]
+
+
+@app.post("/snippets/{snippet_id}/add-tags", status_code=status.HTTP_201_CREATED)
+def add_tags(
+    snippet_id: int,
+    tags_payload: Annotated[
+        TagsPayload, Body()
+    ],  # Example: {"tags": ["python", "fastapi", "web"]}
+    repo=Depends(get_repo),
+):
+    try:
+        repo.get(snippet_id)
+    except SnippetNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Snippet with id {snippet_id} not found",
+        )
+    for t in tags_payload.tags:
+        repo.add_tag(snippet_id, t)
+
+    return repo.get(snippet_id)

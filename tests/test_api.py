@@ -344,3 +344,80 @@ def test_toggle_favorite_snippet_missing_id(client):
 
     detail = response.json()["detail"]
     assert detail == "Snippet with id 0 not found"
+
+
+# =============================================================================
+# POST /snippets/{id}/add-tags
+# =============================================================================
+
+
+def test_add_tags(snippet, client, db_repo):
+    created = db_repo.add(snippet)
+    response = client.post(
+        f"/snippets/{created.id}/add-tags",
+        json={"tags": ["fastapi", "pydantic", "alembic"]},
+    )
+    assert response.status_code == 201
+
+    updated = client.get(f"/snippets/{created.id}")
+    data = updated.json()
+    assert "fastapi" in data["tags"]
+    assert "pydantic" in data["tags"]
+    assert "alembic" in data["tags"]
+
+
+def test_add_tags_invalid_id(client):
+    response = client.post("/snippets/foo/add-tags", json={"tags": ["python"]})
+    assert response.status_code == 422
+
+    detail = response.json()["detail"]
+    assert len(detail) == 1
+    assert detail[0]["type"] == "int_parsing"
+    assert detail[0]["loc"] == ["path", "snippet_id"]
+    assert "valid integer" in detail[0]["msg"]
+
+
+def test_add_tags_missing_id(client):
+    response = client.post("/snippets/0/add-tags", json={"tags": ["python"]})
+    assert response.status_code == 404
+
+    detail = response.json()["detail"]
+    assert detail == "Snippet with id 0 not found"
+
+
+def test_add_tags_invalid_payload(client, snippet, db_repo):
+    created = db_repo.add(snippet)
+    response = client.post(f"/snippets/{created.id}/add-tags", json={"invalid": []})
+    assert response.status_code == 422
+
+    detail = response.json()["detail"]
+    assert len(detail) == 1
+    assert detail[0]["type"] == "missing"
+    assert detail[0]["loc"] == ["body", "tags"]
+
+
+def test_add_tags_empty_tags(client, snippet, db_repo):
+    created = db_repo.add(snippet)
+    response = client.post(f"/snippets/{created.id}/add-tags", json={"tags": []})
+    assert response.status_code == 201
+
+    updated = client.get(f"/snippets/{created.id}")
+    data = updated.json()
+    assert data["tags"] == []
+
+
+def test_add_duplicate_tags(client, snippet, db_repo):
+    created = db_repo.add(snippet)
+    # Add initial tags
+    client.post(f"/snippets/{created.id}/add-tags", json={"tags": ["python"]})
+
+    # Try adding same tag again
+    response = client.post(
+        f"/snippets/{created.id}/add-tags", json={"tags": ["python"]}
+    )
+    assert response.status_code == 201
+
+    # Verify tag only appears once
+    updated = client.get(f"/snippets/{created.id}")
+    data = updated.json()
+    assert data["tags"].count("python") == 1

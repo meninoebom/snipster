@@ -32,11 +32,11 @@ class AbstractSnippetRepo(ABC):  # pragma: no cover
         pass
 
     @abstractmethod
-    def add_tag(self, snippet_id: int, tag: str) -> None:
+    def add_tag(self, snippet_id: int, tag: str) -> Snippet | None:
         pass
 
     @abstractmethod
-    def remove_tag(self, snippet_id: int, tag: str) -> None:
+    def remove_tag(self, snippet_id: int, tag: str) -> Snippet | None:
         pass
 
     @abstractmethod
@@ -83,16 +83,18 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
         self.session.refresh(snippet)
         return snippet
 
-    def add_tag(self, snippet_id: int, tag: str) -> None:
+    def add_tag(self, snippet_id: int, tag: str) -> Snippet | None:
         snippet = self.session.get(Snippet, snippet_id)
         if snippet is None:
             raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
-        if tag not in snippet.tags:
+        norm = tag.strip().lower()
+        if norm not in snippet.tags:
             snippet.tags.append(tag)
             self.session.commit()
             self.session.refresh(snippet)
+            return snippet
 
-    def remove_tag(self, snippet_id: int, tag: str) -> None:
+    def remove_tag(self, snippet_id: int, tag: str) -> Snippet:
         snippet = self.session.get(Snippet, snippet_id)
         if snippet is None:
             raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
@@ -101,6 +103,7 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
         snippet.tags.remove(tag)
         self.session.commit()
         self.session.refresh(snippet)
+        return snippet
 
     def search(self, query: str) -> Sequence[Snippet]:
         stmt = select(Snippet).where(
@@ -160,20 +163,22 @@ class InMemorySnippetRepo(AbstractSnippetRepo):
         snippet.favorite = not snippet.favorite
         return snippet
 
-    def add_tag(self, snippet_id: int, tag: str) -> None:
+    def add_tag(self, snippet_id: int, tag: str) -> Snippet | None:
         snippet = self.snippets.get(snippet_id)
         if not snippet:
             raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
         if tag not in snippet.tags:
             snippet.tags.append(tag)
+            return snippet
 
-    def remove_tag(self, snippet_id: int, tag: str) -> None:
+    def remove_tag(self, snippet_id: int, tag: str) -> Snippet:
         snippet = self.snippets.get(snippet_id)
         if not snippet:
             raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
         if tag not in snippet.tags:
             raise ValueError(f"Tag {tag} not found on snippet with id {snippet_id}.")
         snippet.tags.remove(tag)
+        return snippet
 
     def search(self, query: str) -> Sequence[Snippet]:
         query = query.lower()

@@ -36,14 +36,6 @@ def client():
         yield client
 
 
-# @pytest.fixture
-# def client_with_data(seed_db):
-#     """Test client with seeded database."""
-#     with TestClient(app) as client:
-#         seed_db()
-#         yield client
-
-
 # =============================================================================
 # POST /create
 # =============================================================================
@@ -234,14 +226,14 @@ def test_list_snippets(client):
 
 
 # =============================================================================
-# GET /snippet{id}
+# GET /snippets/{id}
 # =============================================================================
 
 
 @pytest.mark.usefixtures("seed_db")
 def test_get_snippet(snippet, db_repo, client):
     created_snippet = db_repo.add(snippet)
-    response = client.get(f"/snippet/{created_snippet.id}")
+    response = client.get(f"/snippets/{created_snippet.id}")
     body = response.json()
 
     assert response.status_code == 200
@@ -252,7 +244,7 @@ def test_get_snippet(snippet, db_repo, client):
 
 
 def test_get_snippet_invalid_id(client):
-    response = client.get("/snippet/foo")
+    response = client.get("/snippets/foo")
 
     assert response.status_code == 422
 
@@ -264,7 +256,89 @@ def test_get_snippet_invalid_id(client):
 
 
 def test_get_snippet_missing_id(client):
-    response = client.get("/snippet/0")
+    response = client.get("/snippets/0")
+
+    assert response.status_code == 404
+
+    detail = response.json()["detail"]
+    assert detail == "Snippet with id 0 not found"
+
+
+# =============================================================================
+# DELETE /snippets/{id}
+# =============================================================================
+
+
+@pytest.mark.usefixtures("seed_db")
+def test_delete_snippet(snippet, db_repo, client):
+    created_snippet = db_repo.add(snippet)
+    response = client.delete(f"/snippets/{created_snippet.id}")
+
+    assert response.status_code == 204
+
+
+def test_delete_snippet_invalid_id(client):
+    response = client.delete("/snippets/foo")
+
+    assert response.status_code == 422
+
+    detail = response.json()["detail"]
+    assert len(detail) == 1
+    assert detail[0]["type"] == "int_parsing"
+    assert detail[0]["loc"] == ["path", "snippet_id"]
+    assert "valid integer" in detail[0]["msg"]
+
+
+def test_delete_snippet_missing_id(client):
+    response = client.delete("/snippets/0")
+
+    assert response.status_code == 404
+
+    detail = response.json()["detail"]
+    assert detail == "Snippet with id 0 not found"
+
+
+# =============================================================================
+# POST /snippets/{id}/toggle-favorite
+# =============================================================================
+
+
+def test_toggle_favorite(snippet, db_repo, client):
+    created_snippet = db_repo.add(snippet)
+    assert created_snippet.favorite is False
+
+    response = client.post(f"/snippets/{created_snippet.id}/toggle-favorite")
+    assert response.status_code == 200
+
+    body = response.json()
+    assert body["favorite"] is True
+
+    updated_snippet_response = client.get(f"/snippets/{body["id"]}")
+    updated_snippet_dict = updated_snippet_response.json()
+    assert updated_snippet_dict["favorite"] is True
+
+    response = client.post(f"/snippets/{created_snippet.id}/toggle-favorite")
+    assert response.status_code == 200
+
+    updated_snippet_response = client.get(f"/snippets/{body["id"]}")
+    updated_snippet_dict = updated_snippet_response.json()
+    assert updated_snippet_dict["favorite"] is False
+
+
+def test_toggle_favorite_snippet_invalid_id(client):
+    response = client.post("/snippets/foo/toggle-favorite")
+
+    assert response.status_code == 422
+
+    detail = response.json()["detail"]
+    assert len(detail) == 1
+    assert detail[0]["type"] == "int_parsing"
+    assert detail[0]["loc"] == ["path", "snippet_id"]
+    assert "valid integer" in detail[0]["msg"]
+
+
+def test_toggle_favorite_snippet_missing_id(client):
+    response = client.post("/snippets/0/toggle-favorite")
 
     assert response.status_code == 404
 

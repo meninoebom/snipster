@@ -50,10 +50,33 @@ def list_snippets(repo=Depends(get_repo)) -> list[Snippet]:
     return repo.list()
 
 
-@app.get("/snippet/{snippet_id}")
-async def get_snippet(snippet_id: int, repo=Depends(get_repo)) -> Snippet:
+@app.get("/snippets/{snippet_id}")
+def get_snippet(snippet_id: int, repo=Depends(get_repo)) -> Snippet:
     try:
         return repo.get(snippet_id)
+    except SnippetNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Snippet with id {snippet_id} not found",
+        )
+
+
+@app.delete("/snippets/{snippet_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_snippet(snippet_id: int, repo=Depends(get_repo)):
+    try:
+        repo.delete(snippet_id)
+        return
+    except SnippetNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Snippet with id {snippet_id} not found",
+        )
+
+
+@app.post("/snippets/{snippet_id}/toggle-favorite")
+def toggle_favorite(snippet_id: int, repo=Depends(get_repo)) -> Snippet:
+    try:
+        return repo.toggle_favorite(snippet_id)
     except SnippetNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

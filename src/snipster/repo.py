@@ -28,7 +28,7 @@ class AbstractSnippetRepo(ABC):  # pragma: no cover
         pass
 
     @abstractmethod
-    def toggle_favorite(self, snippet_id: int) -> None:
+    def toggle_favorite(self, snippet_id: int) -> Snippet | None:
         pass
 
     @abstractmethod
@@ -74,13 +74,14 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
         self.session.delete(snippet)
         self.session.commit()
 
-    def toggle_favorite(self, snippet_id: int) -> None:
+    def toggle_favorite(self, snippet_id: int) -> Snippet:
         snippet = self.session.get(Snippet, snippet_id)
         if snippet is None:
             raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
         snippet.favorite = not snippet.favorite
         self.session.commit()
         self.session.refresh(snippet)
+        return snippet
 
     def add_tag(self, snippet_id: int, tag: str) -> None:
         snippet = self.session.get(Snippet, snippet_id)
@@ -152,11 +153,12 @@ class InMemorySnippetRepo(AbstractSnippetRepo):
     def delete(self, snippet_id: int) -> None:
         self.snippets.pop(snippet_id, None)
 
-    def toggle_favorite(self, snippet_id: int) -> None:
+    def toggle_favorite(self, snippet_id: int) -> Snippet:
         snippet = self.snippets.get(snippet_id)
         if not snippet:
             raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
         snippet.favorite = not snippet.favorite
+        return snippet
 
     def add_tag(self, snippet_id: int, tag: str) -> None:
         snippet = self.snippets.get(snippet_id)

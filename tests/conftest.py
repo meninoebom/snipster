@@ -135,6 +135,53 @@ def sample_snippets():
     ]
 
 
+@pytest.fixture
+def sample_snippets_for_testing_search():
+    """Define sample snippet data for testing search functionality."""
+    return [
+        {
+            "title": "Foo",
+            "code": "print('foo')",
+            "language": "python",
+            "description": "This is a foo snippet",
+            "tags": [],
+            "favorite": False,
+        },
+        {
+            "title": "Bar",
+            "code": "print('bar')",
+            "language": "python",
+            "description": "This is a bar snippet",
+            "tags": [],
+            "favorite": False,
+        },
+        {
+            "title": "Baz",
+            "code": "print('baz')",
+            "language": "python",
+            "description": "This is a baz snippet",
+            "tags": [],
+            "favorite": False,
+        },
+        {
+            "title": "Super Foo",
+            "code": "print('foo foo foo')",
+            "language": "python",
+            "description": "This is a foo snippet but even more so",
+            "tags": [],
+            "favorite": False,
+        },
+        {
+            "title": "Blah",
+            "code": "print('blah blah blah')",
+            "language": "python",
+            "description": "This is a blah snippet",
+            "tags": ["foo"],
+            "favorite": False,
+        },
+    ]
+
+
 # =============================================================================
 # Helper Functions
 # =============================================================================

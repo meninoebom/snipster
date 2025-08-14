@@ -1,0 +1,17 @@
+[project]
+name = "snipster-frontend"
+version = "0.1.0"
+description = "Snipster Reflex frontend application"
+authors = [
+    {name = "Pybites Cohort"}
+]
+dependencies = [
+    "reflex==0.8.6"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = []

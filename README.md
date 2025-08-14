@@ -9,6 +9,28 @@ A code snippet management application built with FastAPI backend and Reflex fron
 - Python 3.8+
 - [uv](https://docs.astral.sh/uv/) package manager
 
+### Quick Start (Recommended)
+
+For the fastest setup, use the provided Makefile commands:
+
+```bash
+# Install dependencies and start backend server
+make dev
+
+# In another terminal, start the frontend
+make ui
+```
+
+This will automatically:
+- Install all dependencies
+- Initialize the database
+- Start the FastAPI backend at http://localhost:8000
+- Start the Reflex frontend at http://localhost:3000
+
+### Manual Setup
+
+If you prefer to run commands manually, follow the steps below.
+
 ### Backend (FastAPI)
 
 The FastAPI backend provides the REST API for managing code snippets.

@@ -25,7 +25,15 @@ The FastAPI backend provides the REST API for managing code snippets.
    uv sync
    ```
 
-3. **Start the FastAPI development server:**
+3. **Initialize the database (REQUIRED):**
+
+   ```bash
+   uv run alembic upgrade head
+   ```
+
+   **Important**: This step is required before starting the server. It creates the database tables and schema.
+
+4. **Start the FastAPI development server:**
 
    ```bash
    uv run fastapi dev src/snipster/api.py
@@ -33,7 +41,7 @@ The FastAPI backend provides the REST API for managing code snippets.
 
    The API will be available at `http://localhost:8000`
 
-4. **Optional: Run tests:**
+5. **Optional: Run tests:**
 
    ```bash
    uv run pytest
@@ -68,6 +76,44 @@ The Reflex frontend provides a modern web interface for managing snippets.
    ```bash
    uv run reflex export
    ```
+
+## Database Management
+
+### Alembic Migrations
+
+Alembic handles database schema migrations for the project.
+
+1. **Create a new migration:**
+
+   ```bash
+   uv run alembic revision --autogenerate -m "Description of changes"
+   ```
+
+2. **Apply pending migrations:**
+
+   ```bash
+   uv run alembic upgrade head
+   ```
+
+3. **Rollback to previous migration:**
+
+   ```bash
+   uv run alembic downgrade -1
+   ``****`
+
+4. **View migration history:**
+
+   ```bash
+   uv run alembic history
+   ```
+
+5. **Check current migration status:**
+
+   ```bash
+   uv run alembic current
+   ```
+
+**Note**: Always review auto-generated migrations before applying them to production.
 
 ## Project Structure
 

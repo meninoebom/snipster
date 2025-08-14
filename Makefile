@@ -18,13 +18,13 @@ dev: install-dev init
 cli:
 	uv run python -m src.snipster
 
-.PHONY: ui
-ui:
-	cd ui && uv run reflex run
-
 .PHONY: run
 run:
 	uv run uvicorn src.snipster.api:app --reload
+
+.PHONY: ui
+ui:
+	cd ui && uv run reflex run
 
 .PHONY: lint
 lint:

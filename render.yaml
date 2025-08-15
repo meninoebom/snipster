@@ -5,7 +5,7 @@ services:
     plan: free
     autoDeploy: true  # auto-deploy on git push
     buildCommand: uv sync --frozen --active && uv cache prune --ci # install only dependencies that are in the lockfile and cache prune
-    startCommand: uv run --active uvicorn snipster.api:app --host 0.0.0.0 --port $PORT
+    startCommand: uv run alembic upgrade head && uv run --active uvicorn snipster.api:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: APP_ENV
         value: staging

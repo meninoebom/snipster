@@ -24,5 +24,7 @@ services:
   - type: web
     name: snipster-frontend
     runtime: python
+    plan: free
+    autoDeploy: true  # auto-deploy on git push
     buildCommand: uv sync --frozen && uv cache prune --ci
     startCommand: cd ui && uv run reflex run --env prod --port $PORT

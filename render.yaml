@@ -28,9 +28,7 @@ services:
     plan: free
     autoDeploy: true
     buildCommand: uv sync --frozen --active && uv cache prune --ci
-    startCommand: uv run --active reflex run --env prod \
-      --frontend-host 0.0.0.0 --frontend-port $PORT \
-      --backend-host 0.0.0.0 --backend-port 10000
+    startCommand: uv run reflex run --env prod --backend-host 0.0.0.0 --backend-port $PORT
     envVars:
       - key: API_BASE_URL
         value: https://snipster-api.onrender.com

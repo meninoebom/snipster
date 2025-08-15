@@ -6,7 +6,10 @@ authors = [
     {name = "Pybites Cohort"}
 ]
 dependencies = [
-    "reflex==0.8.6"
+    "httpx>=0.28.1",
+    "python-dotenv>=1.1.1",
+    "reflex==0.8.6",
+    "requests>=2.32.4",
 ]
 
 [build-system]

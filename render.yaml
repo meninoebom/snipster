@@ -4,8 +4,8 @@ services:
     runtime: python
     plan: free
     autoDeploy: true  # auto-deploy on git push
-    buildCommand: uv sync --frozen && uv cache prune --ci # install only dependencies that are in the lockfile and cache prune
-    startCommand: uv run uvicorn snipster.api:app --host 0.0.0.0 --port $PORT
+    buildCommand: uv sync --frozen --active && uv cache prune --ci # install only dependencies that are in the lockfile and cache prune
+    startCommand: uv run --active uvicorn snipster.api:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: APP_ENV
         value: staging
@@ -26,5 +26,8 @@ services:
     runtime: python
     plan: free
     autoDeploy: true  # auto-deploy on git push
-    buildCommand: uv sync --frozen && uv cache prune --ci
-    startCommand: cd ui && uv run reflex run --env prod --port $PORT
+    buildCommand: uv sync --frozen --active && uv cache prune --ci
+    startCommand: cd ui && uv run --active reflex run --env prod --bakend-port $PORT
+    envVars:
+      - key: API_BASE_URL
+        value: https://snipster-api.onrender.com

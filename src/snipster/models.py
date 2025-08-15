@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, List
+from typing import Any, List, Literal
 
 from sqlalchemy import JSON, Column
 from sqlalchemy.ext.mutable import MutableList
@@ -16,7 +16,9 @@ class Language(str, Enum):
 class SnippetBase(SQLModel, table=False):
     title: str = Field(description="Title of the snippet", min_length=3)
     code: str = Field(description="The actual code snippet content", min_length=3)
-    language: Language = Field(description="Programming language of the snippet")
+    language: Literal["javascript", "python", "rust"] = Field(
+        description="Programming language of the snippet"
+    )
     description: str | None = Field(
         default=None, description="Optional description of the snippet"
     )

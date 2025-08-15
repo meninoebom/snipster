@@ -21,3 +21,8 @@ services:
       #   fromDatabase:
       #     name: snipster-postgres-staging
       #     property: connectionString
+  - type: web
+    name: snipster-frontend
+    runtime: python
+    buildCommand: uv sync --frozen && uv cache prune --ci
+    startCommand: cd ui && uv run reflex run --env prod --port $PORT

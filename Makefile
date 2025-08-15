@@ -18,9 +18,9 @@ dev: install-dev init
 cli:
 	uv run python -m src.snipster
 
-.PHONY: run
-run:
-	uv run uvicorn src.snipster.api:app --reload
+.PHONY: render-run
+render-run: install init
+	uv run --active uvicorn snipster.api:app --host 0.0.0.0 --port $PORT
 
 .PHONY: ui
 ui:

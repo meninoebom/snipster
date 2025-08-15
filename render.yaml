@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: snipster-api
+    runtime: python
+    plan: free
+    autoDeploy: true  # auto-deploy on git push
+    buildCommand: uv sync --frozen && uv cache prune --ci
+    startCommand: uv run uvicorn snipster.api:app --host 0.0.0.0 --port $PORT

@@ -1,5 +1,12 @@
+import os
+
 import httpx
 import reflex as rx
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 
 
 class State(rx.State):
@@ -20,7 +27,7 @@ class State(rx.State):
             if query.strip():
                 async with httpx.AsyncClient() as client:
                     response = await client.get(
-                        "http://localhost:8000/search", params={"q": query}
+                        f"{API_BASE_URL}/search", params={"q": query}
                     )
                     if response.status_code == 200:
                         self.snippets = response.json()
@@ -32,7 +39,7 @@ class State(rx.State):
     async def load_all_snippets(self):
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.get("http://localhost:8000/snippets")
+                response = await client.get(f"{API_BASE_URL}/snippets")
                 if response.status_code == 200:
                     self.snippets = response.json()
         except Exception:
@@ -54,7 +61,7 @@ class State(rx.State):
             async with httpx.AsyncClient() as client:
                 tags = [t.strip() for t in self.new_tags.split(",") if t.strip()]
                 response = await client.post(
-                    "http://localhost:8000/create",
+                    f"{API_BASE_URL}/create",
                     json={
                         "title": self.new_title,
                         "code": self.new_code,
@@ -74,9 +81,7 @@ class State(rx.State):
     async def delete_snippet(self, snippet_id: int):
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.delete(
-                    f"http://localhost:8000/snippets/{snippet_id}"
-                )
+                response = await client.delete(f"{API_BASE_URL}/snippets/{snippet_id}")
                 if response.status_code == 200:
                     await self.load_all_snippets()
         except Exception:

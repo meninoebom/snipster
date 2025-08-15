@@ -22,6 +22,11 @@ class HealthResponse(BaseModel):
     uptime_seconds: float
 
 
+@app.get("/")
+def read_root():
+    return {"message": "Welcome to Snipster API"}
+
+
 @app.get("/health", response_model=HealthResponse, status_code=status.HTTP_200_OK)
 def health_check():
     return HealthResponse(

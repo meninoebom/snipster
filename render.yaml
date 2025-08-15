@@ -24,10 +24,11 @@ services:
   - type: web
     name: snipster-frontend
     runtime: python
+    rootDir: ui
     plan: free
-    autoDeploy: true  # auto-deploy on git push
+    autoDeploy: true
     buildCommand: uv sync --frozen --active && uv cache prune --ci
-    startCommand: cd ui && uv run --active reflex run --env prod --bakend-port $PORT
+    startCommand: uv run --active reflex run --env prod --frontend-port $PORT --backend-port 10000
     envVars:
       - key: API_BASE_URL
         value: https://snipster-api.onrender.com

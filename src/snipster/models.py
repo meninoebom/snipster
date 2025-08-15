@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, List, Literal
+from typing import Any, List
 
+from pydantic import field_validator
 from sqlalchemy import JSON, Column
 from sqlalchemy.ext.mutable import MutableList
 from sqlmodel import Field, SQLModel
@@ -16,9 +17,7 @@ class Language(str, Enum):
 class SnippetBase(SQLModel, table=False):
     title: str = Field(description="Title of the snippet", min_length=3)
     code: str = Field(description="The actual code snippet content", min_length=3)
-    language: Literal["javascript", "python", "rust"] = Field(
-        description="Programming language of the snippet"
-    )
+    language: str = Field(description="Programming language of the snippet")
     description: str | None = Field(
         default=None, description="Optional description of the snippet"
     )
@@ -31,6 +30,15 @@ class SnippetBase(SQLModel, table=False):
     favorite: bool = Field(
         default=False, description="Whether this snippet is marked as favorite"
     )
+
+    @field_validator("language")
+    def validate_language(cls, v):
+        if isinstance(v, str):
+            v = v.lower()
+        allowed = ["javascript", "python", "rust"]
+        if v not in allowed:
+            raise ValueError(f"Language must be one of: {allowed}")
+        return v
 
 
 class Snippet(SnippetBase, table=True):

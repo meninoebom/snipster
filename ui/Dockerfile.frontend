@@ -1,0 +1,23 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# Copy dependencies
+COPY pyproject.toml uv.lock ./
+COPY ui/ ./ui/
+
+# Install dependencies
+RUN pip install uv && uv sync --frozen
+
+# Set environment variables
+ENV API_BASE_URL="https://snipster-fastapi.fly.dev"
+
+WORKDIR /app/ui
+
+# Export frontend for production
+RUN uv run reflex export
+
+EXPOSE 8000
+
+# Run Reflex in backend-only mode (serves exported frontend)
+CMD ["uv", "run", "reflex", "run", "--env", "prod", "--frontend-port", "3000", "--backend-port", "8000"]

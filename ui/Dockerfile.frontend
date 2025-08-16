@@ -1,23 +1,28 @@
 FROM python:3.13-slim
 
+# Install system dependencies needed by Reflex (bun, unzip, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    unzip curl git \
+ && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# Copy dependencies
-COPY pyproject.toml uv.lock ./
+# Copy dependency files
+COPY ui/pyproject.toml ui/uv.lock ./
+
+# Copy UI source code
 COPY ui/ ./ui/
 
-# Install dependencies
+# Install dependencies and lock them
 RUN pip install uv && uv sync --frozen
 
-# Set environment variables
+# Set environment variable for API base URL
 ENV API_BASE_URL="https://snipster-fastapi.fly.dev"
 
 WORKDIR /app/ui
 
-# Export frontend for production
-RUN uv run reflex export
+EXPOSE 8080
 
-EXPOSE 8000
-
-# Run Reflex in backend-only mode (serves exported frontend)
-CMD ["uv", "run", "reflex", "run", "--env", "prod", "--frontend-port", "3000", "--backend-port", "8000"]
+# Run Reflex in backend-only mode serving the frontend on port 8080
+# Run both processes: frontend on 8080, backend on 8000, bind backend to 0.0.0.0
+CMD ["uv", "run", "reflex", "run", "--env", "prod", "--frontend-port", "8080", "--backend-port", "8000", "--backend-host", "0.0.0.0"]

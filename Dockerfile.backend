@@ -3,7 +3,8 @@ FROM python:3.13-slim
 WORKDIR /app
 
 # Copy workspace dependencies
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml README.md ./
+COPY uv.lock ./
 
 # Install uv and dependencies
 RUN pip install uv && uv sync --frozen
@@ -12,6 +13,8 @@ RUN pip install uv && uv sync --frozen
 COPY src/ ./src/
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
+
+ENV PYTHONPATH=/app/src
 
 # Expose backend port
 EXPOSE 8000

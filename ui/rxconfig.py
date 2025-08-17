@@ -2,7 +2,6 @@ import reflex as rx
 
 config = rx.Config(
     app_name="ui",
-    # Remove these hardcoded ports:
-    # frontend_port=3000,
-    # backend_port=8001,
+    api_url="https://snipster-reflex.fly.dev",
+    disable_plugins=["reflex.plugins.sitemap.SitemapPlugin"],
 )

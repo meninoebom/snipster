@@ -1,28 +1,49 @@
 FROM python:3.13-slim
 
-# Install system dependencies needed by Reflex (bun, unzip, etc.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    unzip curl git \
+    unzip curl git caddy \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy dependency files
+# bring in the UI project only
 COPY ui/pyproject.toml ui/uv.lock ./
-
-# Copy UI source code
 COPY ui/ ./ui/
 
-# Install dependencies and lock them
-RUN pip install uv && uv sync --frozen
+# install deps for the UI project (pyproject is at /app)
+RUN pip install uv && \
+    uv sync --frozen
 
-# Set environment variable for API base URL
-ENV API_BASE_URL="https://snipster-fastapi.fly.dev"
-
+# run export from the UI folder so rxconfig.py is visible
 WORKDIR /app/ui
+RUN uv run reflex export --frontend-only
+
+# caddy config (SPA static + backend proxy)
+RUN printf '%s\n' \
+    ':8080 {' \
+    '  root * /app/ui/.web/_static' \
+    '  encode zstd gzip' \
+    '' \
+    '  @events path /_event*' \
+    '  reverse_proxy @events 127.0.0.1:8000' \
+    '' \
+    '  @api path /admin* /ping /upload* /api*' \
+    '  reverse_proxy @api 127.0.0.1:8000' \
+    '' \
+    '  handle {' \
+    '    file_server' \
+    '  }' \
+    '' \
+    '  handle {' \
+    '    rewrite * /index.html' \
+    '    file_server' \
+    '  }' \
+    '}' \
+    > /etc/caddy/Caddyfile
 
 EXPOSE 8080
 
-# Run Reflex in backend-only mode serving the frontend on port 8080
-# Run both processes: frontend on 8080, backend on 8000, bind backend to 0.0.0.0
-CMD ["uv", "run", "reflex", "run", "--env", "prod", "--frontend-port", "8080", "--backend-port", "8000", "--backend-host", "0.0.0.0"]
+CMD ["/bin/sh","-lc", "\
+  uv run reflex run --env prod --backend-only --backend-port 8000 --backend-host 0.0.0.0 & \
+  caddy run --config /etc/caddy/Caddyfile \
+"]

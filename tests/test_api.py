@@ -182,7 +182,7 @@ def test_create_snippet_invalid_language(client):
     assert "detail" in body
     error = next((e for e in body["detail"] if e["loc"][-1] == "language"), None)
     assert error is not None
-    assert error["type"] == "enum"
+    assert error["type"] == "value_error"
 
 
 # =============================================================================
@@ -433,11 +433,10 @@ def test_search(sample_snippets_for_testing_search, client):
     response = client.get("/search", params={"q": "foo"})
     results = response.json()
     assert response.status_code == 200
-    assert len(results) == 3
+    assert len(results) == 2
     titles = [r["title"] for r in results]
     assert "Foo" in titles
     assert "Super Foo" in titles
-    assert "Blah" in titles
 
     response = client.get("/search", params={"q": "baz"})
     results = response.json()

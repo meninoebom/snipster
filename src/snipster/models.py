@@ -47,7 +47,9 @@ class Snippet(SnippetBase, table=True):
     updated_at: datetime | None = None
 
     def __str__(self) -> str:
-        return f"{self.id}: {self.title} ({self.language.value}) {'⭐️' if self.favorite else ''}"
+        return (
+            f"{self.id}: {self.title} ({self.language}) {'⭐️' if self.favorite else ''}"
+        )
 
     @classmethod
     def create_snippet(cls, **kwargs: Any) -> "Snippet":

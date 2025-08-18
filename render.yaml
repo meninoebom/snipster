@@ -21,14 +21,14 @@ services:
       #   fromDatabase:
       #     name: snipster-postgres-staging
       #     property: connectionString
-  - type: web
-    name: snipster-frontend
-    runtime: python
-    rootDir: ui
-    plan: free
-    autoDeploy: true
-    buildCommand: uv sync --frozen --active && uv cache prune --ci
-    startCommand: uv run --active reflex run --env prod --frontend-port $PORT --backend-port 8000
-    envVars:
-      - key: API_BASE_URL
-        value: https://snipster-api.onrender.com
+  # - type: web
+  #   name: snipster-frontend
+  #   runtime: python
+  #   rootDir: ui
+  #   plan: free
+  #   autoDeploy: true
+  #   buildCommand: uv sync --frozen --active && uv cache prune --ci
+  #   startCommand: uv run --active reflex run --env prod --frontend-port $PORT --backend-port 8000
+  #   envVars:
+  #     - key: API_BASE_URL
+  #       value: https://snipster-api.onrender.com

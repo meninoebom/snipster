@@ -212,7 +212,3 @@ def delete(
     except Exception as e:
         console.print(f"[red]Unexpected error: {str(e)}[/red]")
         raise typer.Exit(code=1)
-
-
-if __name__ == "__main__":
-    app()

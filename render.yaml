@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: snipster-api
+    runtime: python
+    plan: free
+    autoDeploy: true  # auto-deploy on git push
+    buildCommand: uv sync --frozen --active && uv cache prune --ci # install only dependencies that are in the lockfile and cache prune
+    startCommand: uv run --active uvicorn snipster.api:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: APP_ENV
+        value: staging
+      - key: LOG_LEVEL
+        value: info
+      - fromGroup: snipster-stage   # pulls in secrets at deploy time from this group
+      # This will get the connection string from the database, but
+      # it will be the wrong dialect for sqlalchemy
+      # database_url = os.getenv("DATABASE_URL")
+      # if database_url and database_url.startswith("postgresql://"):
+      #     database_url = database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+      # - key: DATABASE_URL
+      #   fromDatabase:
+      #     name: snipster-postgres-staging
+      #     property: connectionString
+  - type: web
+    name: snipster-frontend
+    runtime: python
+    rootDir: ui
+    plan: free
+    autoDeploy: true
+    buildCommand: uv sync --frozen --active && uv cache prune --ci
+    startCommand: uv run reflex run --env prod --backend-host 0.0.0.0 --backend-port $PORT
+    envVars:
+      - key: API_BASE_URL
+        value: https://snipster-api.onrender.com

@@ -1,6 +1,7 @@
 from typing import Generator
 
 import pytest
+from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, create_engine
 
 from src.snipster.db import SessionFactory
@@ -15,7 +16,18 @@ from src.snipster.repo import DatabaseBackedSnippetRepo, InMemorySnippetRepo
 @pytest.fixture(scope="function")
 def test_session_factory():
     """Provide a SessionFactory with in-memory SQLite for tests."""
-    test_engine = create_engine("sqlite:///:memory:", echo=False)
+    test_engine = create_engine(
+        "sqlite://",
+        # This allows multiple threads to use the same connection
+        # otherwise you'll get an error:
+        # "SQLite objects created in a thread can only be used in that same thread"
+        connect_args={"check_same_thread": False},
+        # StaticPool maintains a single connection shared by all threads to avoid
+        # "database is locked" errors with in-memory SQLite
+        poolclass=StaticPool,
+        # Disable SQL query logging to keep test output clean
+        echo=False,
+    )
     SQLModel.metadata.create_all(test_engine)
     factory = SessionFactory(test_engine)
 
@@ -26,7 +38,7 @@ def test_session_factory():
 
 
 @pytest.fixture(scope="function")
-def get_session(test_session_factory):
+def get_test_session(test_session_factory):
     """Provide a database session for tests that use SessionFactory."""
     with test_session_factory.get_session() as session:
         # Without `yield` the with block would end immediately
@@ -90,6 +102,84 @@ def another_snippet() -> SnippetCreate:
     return SnippetCreate(
         title="My Snippet", code="console.log('stuff')", language=Language.javascript
     )
+
+
+@pytest.fixture
+def sample_snippets():
+    """Define sample snippet data for tests."""
+    return [
+        {
+            "title": "Hello World",
+            "code": "print('Hello, world!')",
+            "language": "python",
+            "description": "Classic first program",
+            "tags": ["beginner", "basics"],
+            "favorite": False,
+        },
+        {
+            "title": "Array Map",
+            "code": "const doubled = arr.map(x => x * 2)",
+            "language": "javascript",
+            "description": "Double array values",
+            "tags": ["array", "functional"],
+            "favorite": True,
+        },
+        {
+            "title": "Hello Rust",
+            "code": 'fn main() { println!("Hello, Rust!"); }',
+            "language": "rust",
+            "description": "Basic Rust program",
+            "tags": ["beginner"],
+            "favorite": False,
+        },
+    ]
+
+
+@pytest.fixture
+def sample_snippets_for_testing_search():
+    """Define sample snippet data for testing search functionality."""
+    return [
+        {
+            "title": "Foo",
+            "code": "print('foo')",
+            "language": "python",
+            "description": "This is a foo snippet",
+            "tags": [],
+            "favorite": False,
+        },
+        {
+            "title": "Bar",
+            "code": "print('bar')",
+            "language": "python",
+            "description": "This is a bar snippet",
+            "tags": [],
+            "favorite": False,
+        },
+        {
+            "title": "Baz",
+            "code": "print('baz')",
+            "language": "python",
+            "description": "This is a baz snippet",
+            "tags": [],
+            "favorite": False,
+        },
+        {
+            "title": "Super Foo",
+            "code": "print('foo foo foo')",
+            "language": "python",
+            "description": "This is a foo snippet but even more so",
+            "tags": [],
+            "favorite": False,
+        },
+        {
+            "title": "Blah",
+            "code": "print('blah blah blah')",
+            "language": "python",
+            "description": "This is a blah snippet",
+            "tags": ["foo"],
+            "favorite": False,
+        },
+    ]
 
 
 # =============================================================================

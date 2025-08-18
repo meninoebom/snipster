@@ -4,6 +4,7 @@
 name = "snipster-frontend"
 version = "0.1.0"
 description = "Snipster Reflex frontend application"
+requires-python = ">=3.13"
 authors = [
     {name = "Pybites Cohort"}
 ]

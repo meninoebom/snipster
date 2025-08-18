@@ -16,7 +16,7 @@ dev: install-dev init
 
 .PHONY: reflex-dev
 reflex-dev: fastapi-dev
-	cd ui && uv run reflex run --backend-port 8000
+	cd ui && uv run reflex run --backend-port 8001
 
 .PHONY: cli
 cli:

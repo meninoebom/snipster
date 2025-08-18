@@ -116,7 +116,9 @@ def add_form():
                     on_change=State.set_new_tags,
                 ),
                 rx.hstack(
-                    rx.button("Cancel", on_click=State.toggle_add_form, variant="soft"),
+                    rx.button(
+                        "Cancel", on_click=State.toggle_add_form, variant="surface"
+                    ),
                     rx.button("Add Snippet", on_click=State.add_snippet),
                     spacing="2",
                 ),
@@ -134,7 +136,7 @@ def snippet_card(snippet: dict):
         rx.vstack(
             rx.hstack(
                 rx.text(snippet["title"], weight="bold", size="3"),
-                rx.badge(snippet.get("language", "text"), variant="soft"),
+                rx.badge(snippet.get("language", "text"), variant="surface"),
                 rx.spacer(),
                 width="100%",
             ),
@@ -151,7 +153,7 @@ def snippet_card(snippet: dict):
                             "Delete",
                             on_click=lambda: State.delete_snippet(snippet["id"]),
                             size="1",
-                            variant="soft",
+                            variant="surface",
                             color="red",
                         ),
                     ),
@@ -174,6 +176,21 @@ def index():
     return rx.container(
         rx.vstack(
             rx.heading("Snipster v1", size="6", margin_bottom="4"),
+            rx.card(
+                rx.vstack(
+                    rx.text("Environment Info:", weight="bold", size="2"),
+                    rx.text(f"API_BASE_URL: {API_BASE_URL}", size="2", color="blue"),
+                    rx.text(
+                        f"Environment: {'Production' if 'reflex.run' in API_BASE_URL else 'Local'}",
+                        size="2",
+                        color="gray",
+                    ),
+                    spacing="1",
+                ),
+                width="100%",
+                margin_bottom="4",
+                variant="surface",
+            ),
             rx.hstack(
                 rx.input(
                     placeholder="Search snippets...",

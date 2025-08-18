@@ -176,21 +176,6 @@ def index():
     return rx.container(
         rx.vstack(
             rx.heading("Snipster v1", size="6", margin_bottom="4"),
-            rx.card(
-                rx.vstack(
-                    rx.text("Environment Info:", weight="bold", size="2"),
-                    rx.text(f"API_BASE_URL: {API_BASE_URL}", size="2", color="blue"),
-                    rx.text(
-                        f"Environment: {'Production' if 'reflex.run' in API_BASE_URL else 'Local'}",
-                        size="2",
-                        color="gray",
-                    ),
-                    spacing="1",
-                ),
-                width="100%",
-                margin_bottom="4",
-                variant="surface",
-            ),
             rx.hstack(
                 rx.input(
                     placeholder="Search snippets...",

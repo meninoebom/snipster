@@ -18,9 +18,11 @@ dev: install-dev init
 reflex-dev: fastapi-dev
 	cd ui && uv run reflex run --backend-port 8001
 
+# Usage: make cli ARGS="-- --help"
+#        make cli ARGS="-- get foo"
 .PHONY: cli
 cli:
-	uv run python -m src.snipster
+	uv run python -m src.snipster $(ARGS)
 
 .PHONY: run-fastapi-on-render
 run-fastapi-on-render: install init

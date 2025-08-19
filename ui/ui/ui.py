@@ -116,7 +116,9 @@ def add_form():
                     on_change=State.set_new_tags,
                 ),
                 rx.hstack(
-                    rx.button("Cancel", on_click=State.toggle_add_form, variant="soft"),
+                    rx.button(
+                        "Cancel", on_click=State.toggle_add_form, variant="surface"
+                    ),
                     rx.button("Add Snippet", on_click=State.add_snippet),
                     spacing="2",
                 ),
@@ -134,7 +136,7 @@ def snippet_card(snippet: dict):
         rx.vstack(
             rx.hstack(
                 rx.text(snippet["title"], weight="bold", size="3"),
-                rx.badge(snippet.get("language", "text"), variant="soft"),
+                rx.badge(snippet.get("language", "text"), variant="surface"),
                 rx.spacer(),
                 width="100%",
             ),
@@ -151,7 +153,7 @@ def snippet_card(snippet: dict):
                             "Delete",
                             on_click=lambda: State.delete_snippet(snippet["id"]),
                             size="1",
-                            variant="soft",
+                            variant="surface",
                             color="red",
                         ),
                     ),

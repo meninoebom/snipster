@@ -26,11 +26,7 @@ def upgrade() -> None:
         "snippet",
         sa.Column("title", sa.String(), nullable=False),
         sa.Column("code", sa.String(), nullable=False),
-        sa.Column(
-            "language",
-            sa.Enum("JAVASCRIPT", "PYTHON", "RUST", name="language"),
-            nullable=False,
-        ),
+        sa.Column("language", sa.Text(), nullable=False),
         sa.Column("description", sa.String(), nullable=True),
         sa.Column("tags", sa.JSON(), nullable=True),
         sa.Column("favorite", sa.Boolean(), nullable=False),

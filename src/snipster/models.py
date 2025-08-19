@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, List
 
+from pydantic import field_validator
 from sqlalchemy import JSON, Column
 from sqlalchemy.ext.mutable import MutableList
 from sqlmodel import Field, SQLModel
@@ -16,7 +17,7 @@ class Language(str, Enum):
 class SnippetBase(SQLModel, table=False):
     title: str = Field(description="Title of the snippet", min_length=3)
     code: str = Field(description="The actual code snippet content", min_length=3)
-    language: Language = Field(description="Programming language of the snippet")
+    language: str = Field(description="Programming language of the snippet")
     description: str | None = Field(
         default=None, description="Optional description of the snippet"
     )
@@ -30,6 +31,15 @@ class SnippetBase(SQLModel, table=False):
         default=False, description="Whether this snippet is marked as favorite"
     )
 
+    @field_validator("language")
+    def validate_language(cls, v):
+        if isinstance(v, str):
+            v = v.lower()
+        allowed = ["javascript", "python", "rust"]
+        if v not in allowed:
+            raise ValueError(f"Language must be one of: {allowed}")
+        return v
+
 
 class Snippet(SnippetBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -37,7 +47,9 @@ class Snippet(SnippetBase, table=True):
     updated_at: datetime | None = None
 
     def __str__(self) -> str:
-        return f"{self.id}: {self.title} ({self.language.value}) {'⭐️' if self.favorite else ''}"
+        return (
+            f"{self.id}: {self.title} ({self.language}) {'⭐️' if self.favorite else ''}"
+        )
 
     @classmethod
     def create_snippet(cls, **kwargs: Any) -> "Snippet":

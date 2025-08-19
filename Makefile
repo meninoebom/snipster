@@ -10,21 +10,21 @@ install-dev:
 init: install-dev
 	uv run alembic upgrade head
 
-.PHONY: dev
+.PHONY: fastapi-dev
 dev: install-dev init
 	uv run fastapi dev src/snipster/api.py
+
+.PHONY: reflex-dev
+reflex-dev: fastapi-dev
+	cd ui && uv run reflex run --backend-port 8001
 
 .PHONY: cli
 cli:
 	uv run python -m src.snipster
 
-.PHONY: run
-run:
-	uv run uvicorn src.snipster.api:app --reload
-
-.PHONY: ui
-ui:
-	cd ui && uv run reflex run
+.PHONY: run-fastapi-on-render
+run-fastapi-on-render: install init
+	uv run --active uvicorn snipster.api:app --host 0.0.0.0 --port $PORT
 
 .PHONY: lint
 lint:

@@ -1,7 +1,7 @@
 [project]
-name = "snipster"
+name = "pdc-snipster-cli"
 version = "0.1.0"
-description = "Add your description here"
+description = "Code snippet repository"
 readme = "README.md"
 authors = [
     { name = "Brandon Brown", email = "afrobot@gmail.com" }
@@ -15,6 +15,7 @@ dependencies = [
     "python-dotenv>=1.1.1",
     "rapidfuzz>=3.13.0",
     "reflex>=0.8.6",
+    "reflex-hosting-cli>=0.1.55",
     "rich>=14.0.0",
     "sqlmodel>=0.0.24",
     "typer>=0.16.0",
@@ -26,6 +27,18 @@ snipster = "snipster.cli:app"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build]
+only-packages = true
+# Exclude everything except the CLI for PyPI packaging
+exclude = [
+  "src/snipster/api.py",
+  "ui",
+  "tests",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/snipster"]
 
 [dependency-groups]
 dev = [

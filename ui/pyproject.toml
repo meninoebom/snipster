@@ -1,7 +1,10 @@
+# No changes requested for the provided file /Users/brandon/dev/pybites/snipster/ui/pyproject.toml, so outputting it unchanged.
+
 [project]
 name = "snipster-frontend"
 version = "0.1.0"
 description = "Snipster Reflex frontend application"
+requires-python = ">=3.13"
 authors = [
     {name = "Pybites Cohort"}
 ]
@@ -17,7 +20,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["."]  # Tells Hatchling to package everything in current directory
+packages = ["."]
 
 [tool.uv]
 dev-dependencies = []

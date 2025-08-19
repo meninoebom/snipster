@@ -1,0 +1,5 @@
+# FastAPI backend running on Render.com
+# API_BASE_URL=https://snipster-api.onrender.com
+
+# FastAPI backend running on Fly.io
+API_BASE_URL=https://snipster-fastapi.fly.dev

@@ -121,8 +121,10 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
     def fuzzy_search(self, query: str) -> Sequence[Snippet]:
         all_snippets = self.session.exec(select(Snippet)).all()
         snippet_dict = {s.title.lower(): s for s in all_snippets}
+        # Normalize query to lowercase for better matching
+        normalized_query = query.lower()
         matches = rapidfuzz_process.extract(
-            query, snippet_dict.keys(), limit=5, score_cutoff=70
+            normalized_query, snippet_dict.keys(), limit=5, score_cutoff=70
         )
         results = [snippet_dict[m[0]] for m in matches]
         return results
@@ -202,8 +204,10 @@ class InMemorySnippetRepo(AbstractSnippetRepo):
 
     def fuzzy_search(self, query: str) -> Sequence[Snippet]:
         snippet_dict = {s.title.lower(): s for s in self.snippets.values()}
+        # Normalize query to lowercase for better matching
+        normalized_query = query.lower()
         matches = rapidfuzz_process.extract(
-            query, snippet_dict.keys(), limit=5, score_cutoff=70
+            normalized_query, snippet_dict.keys(), limit=5, score_cutoff=70
         )
         results = [snippet_dict[m[0]] for m in matches]
         return results

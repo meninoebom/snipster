@@ -67,7 +67,7 @@ def get(
 
     code = Syntax(
         snippet.code,
-        snippet.language.value,
+        snippet.language,
         theme="monokai",
         line_numbers=True,
         word_wrap=True,

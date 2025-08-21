@@ -3,13 +3,13 @@ import pytest
 from src.snipster.models import Language, Snippet
 
 
-def test_saving_snippet_to_database(get_session):
+def test_saving_snippet_to_database(get_test_session):
     snippet = Snippet(
         title="Test Snippet",
         code="print('foo')",
         language=Language.python,
     )
-    with get_session as session:
+    with get_test_session as session:
         session.add(snippet)
         session.commit()
         session.refresh(snippet)

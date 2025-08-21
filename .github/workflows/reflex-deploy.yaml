@@ -15,5 +15,5 @@ jobs:
           auth_token: ${{ secrets.REFLEX_PROJECT_ID }}
           project_id: ${{ secrets.REFLEX_PROJECT_ID }}
           app_directory: "ui" # defaults to root
-          extra_args: "--env API_BASE_URL=https://snipster-fastapi.fly.dev"
+          extra_args: "--env API_BASE_URL=https://snipster-fastapi.fly.dev --envfile .reflex-cloud-env" # using both here not sure what works
           python_version: "3.13"

@@ -4,10 +4,12 @@ from typing import Sequence
 
 from rapidfuzz import process as rapidfuzz_process
 from sqlalchemy import Text, or_
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
-from .exceptions import SnippetNotFoundError
-from .models import Snippet, SnippetCreate
+from .exceptions import SnippetNotFoundError, TagNotAssociatedError, TagNotFoundError
+from .models import Snippet, SnippetCreate, SnippetTag, Tag
 
 
 class AbstractSnippetRepo(ABC):  # pragma: no cover
@@ -32,11 +34,11 @@ class AbstractSnippetRepo(ABC):  # pragma: no cover
         pass
 
     @abstractmethod
-    def add_tag(self, snippet_id: int, tag: str) -> Snippet | None:
+    def add_tag(self, snippet_id: int, tag_name: str) -> Snippet | None:
         pass
 
     @abstractmethod
-    def remove_tag(self, snippet_id: int, tag: str) -> Snippet | None:
+    def remove_tag(self, snippet_id: int, tag_name: str) -> Snippet | None:
         pass
 
     @abstractmethod
@@ -83,26 +85,70 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
         self.session.refresh(snippet)
         return snippet
 
-    def add_tag(self, snippet_id: int, tag: str) -> Snippet | None:
+    def add_tag(self, snippet_id: int, tag_name: str) -> Snippet | None:
         snippet = self.session.get(Snippet, snippet_id)
         if snippet is None:
             raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
-        norm = tag.strip().lower()
-        if norm not in snippet.tags:
-            snippet.tags.append(tag)
-            self.session.commit()
-            self.session.refresh(snippet)
-            return snippet
 
-    def remove_tag(self, snippet_id: int, tag: str) -> Snippet:
+        tag_name = tag_name.strip().lower()
+
+        tag: Tag | None = self.session.exec(
+            select(Tag).where(Tag.name == tag_name)
+        ).one_or_none()
+        if tag is None:
+            tag = Tag(name=tag_name)
+            self.session.add(tag)
+            self.session.flush()  # populates tag.id without committing
+        try:
+            assert tag.id is not None  # narrows the type of tag.id to int
+            self.session.add(SnippetTag(snippet_id=snippet_id, tag_id=tag.id))
+            self.session.commit()
+        except IntegrityError:
+            self.session.rollback()  # link already exists or FK issue; proceed
+
+        # load snippet w/ tags in one go
+        stmt = (
+            select(Snippet)
+            .options(selectinload(Snippet.tags))  # type: ignore
+            .where(Snippet.id == snippet_id)
+        )
+        return self.session.exec(stmt).one()
+
+    def remove_tag(self, snippet_id: int, tag_name: str) -> Snippet:
         snippet = self.session.get(Snippet, snippet_id)
         if snippet is None:
             raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
-        if tag not in snippet.tags:
-            raise ValueError(f"Tag {tag} not found on snippet with id {snippet_id}.")
-        snippet.tags.remove(tag)
+
+        tag_name = tag_name.strip().lower()
+        tag: Tag | None = self.session.exec(
+            select(Tag).where(Tag.name == tag_name)
+        ).one_or_none()
+        if tag is None:
+            raise TagNotFoundError(f"Tag '{tag_name}' not found.")  # Custom exception
+
+        # Ensure tag.id is not None before using it in the query
+        if tag.id is None:
+            raise TagNotFoundError(f"Tag '{tag_name}' has no ID.")
+
+        # Find the SnippetTag record first, then delete it
+        snippet_tag = self.session.exec(
+            select(SnippetTag).where(
+                SnippetTag.snippet_id == snippet_id,
+                SnippetTag.tag_id == tag.id,
+            )
+        ).one_or_none()
+
+        if snippet_tag is None:
+            raise TagNotAssociatedError(
+                f"Tag '{tag_name}' not associated with snippet {snippet_id}."
+            )
+
+        self.session.delete(snippet_tag)
+
         self.session.commit()
-        self.session.refresh(snippet)
+
+        # Refresh the existing snippet object instead of new query
+        self.session.refresh(snippet, ["tags"])
         return snippet
 
     def search(self, query: str) -> Sequence[Snippet]:
@@ -165,21 +211,34 @@ class InMemorySnippetRepo(AbstractSnippetRepo):
         snippet.favorite = not snippet.favorite
         return snippet
 
-    def add_tag(self, snippet_id: int, tag: str) -> Snippet | None:
+    def add_tag(self, snippet_id: int, tag_name: str) -> Snippet | None:
         snippet = self.snippets.get(snippet_id)
         if not snippet:
             raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
-        if tag not in snippet.tags:
+
+        # Check if tag already exists
+        existing_tag = next((tag for tag in snippet.tags if tag.name == tag_name), None)
+        if existing_tag is None:
+            # Create a new tag
+            tag = Tag(name=tag_name)
             snippet.tags.append(tag)
             return snippet
 
-    def remove_tag(self, snippet_id: int, tag: str) -> Snippet:
+    def remove_tag(self, snippet_id: int, tag_name: str) -> Snippet:
         snippet = self.snippets.get(snippet_id)
         if not snippet:
             raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
-        if tag not in snippet.tags:
-            raise ValueError(f"Tag {tag} not found on snippet with id {snippet_id}.")
-        snippet.tags.remove(tag)
+
+        # Find the tag to remove
+        tag_to_remove = next(
+            (tag for tag in snippet.tags if tag.name == tag_name), None
+        )
+        if tag_to_remove is None:
+            raise ValueError(
+                f"Tag {tag_name} not found on snippet with id {snippet_id}."
+            )
+
+        snippet.tags.remove(tag_to_remove)
         return snippet
 
     def search(self, query: str) -> Sequence[Snippet]:
@@ -195,8 +254,8 @@ class InMemorySnippetRepo(AbstractSnippetRepo):
                 if query in snippet.description.lower():
                     hit = True
             if len(snippet.tags) > 0:
-                print(snippet.tags)
-                if query in snippet.tags:
+                # Check if query matches any tag name
+                if any(query in tag.name.lower() for tag in snippet.tags):
                     hit = True
             if hit:
                 results.append(snippet)

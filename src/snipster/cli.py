@@ -78,7 +78,9 @@ def get(
     if description_panel:
         console.print(description_panel)
     console.print(code)
-    console.print(f"\nTags: {', '.join(snippet.tags)}" if snippet.tags else "")
+    console.print(
+        f"\nTags: {', '.join(tag.name for tag in snippet.tags)}" if snippet.tags else ""
+    )
 
 
 @app.command()

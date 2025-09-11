@@ -10,6 +10,8 @@ def get_snippet(session_factory: SessionFactory, snippet_id: int) -> Snippet:
     with session_factory.get_session() as session:
         repo = DatabaseBackedSnippetRepo(session=session)
         snippet = repo.get(snippet_id)
+        # Load the tags relationship before expunging
+        _ = snippet.tags  # This triggers the lazy load
         # Properly detach the object from the session
         session.expunge(snippet)
         return snippet

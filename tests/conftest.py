@@ -33,6 +33,9 @@ def test_session_factory():
 
     yield factory
 
+    # Clean up the database after each test
+    SQLModel.metadata.drop_all(test_engine)
+
     factory.close_all_sessions()
     test_engine.dispose()
 
@@ -107,13 +110,16 @@ def another_snippet() -> SnippetCreate:
 @pytest.fixture
 def sample_snippets():
     """Define sample snippet data for tests."""
+    import uuid
+
+    unique_id = str(uuid.uuid4())[:8]
     return [
         {
             "title": "Hello World",
             "code": "print('Hello, world!')",
             "language": "python",
             "description": "Classic first program",
-            "tags": ["beginner", "basics"],
+            "tags": [f"beginner-{unique_id}", f"basics-{unique_id}"],
             "favorite": False,
         },
         {
@@ -121,7 +127,7 @@ def sample_snippets():
             "code": "const doubled = arr.map(x => x * 2)",
             "language": "javascript",
             "description": "Double array values",
-            "tags": ["array", "functional"],
+            "tags": [f"array-{unique_id}", f"functional-{unique_id}"],
             "favorite": True,
         },
         {
@@ -129,7 +135,7 @@ def sample_snippets():
             "code": 'fn main() { println!("Hello, Rust!"); }',
             "language": "rust",
             "description": "Basic Rust program",
-            "tags": ["beginner"],
+            "tags": [f"beginner-rust-{unique_id}"],
             "favorite": False,
         },
     ]
@@ -226,6 +232,6 @@ def add_search_data(repo):
         code="print('blah blah blah')",
         description="This is a blah snippet",
         language=Language.python,
-        tags=["foo"],
     )
-    repo.add(snippet=snippet5)
+    stored_snippet5 = repo.add(snippet=snippet5)
+    repo.add_tag(stored_snippet5.id, "foo")

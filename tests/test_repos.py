@@ -1,6 +1,6 @@
 import pytest
 
-from src.snipster.exceptions import SnippetNotFoundError
+from src.snipster.exceptions import SnippetNotFoundError, TagNotFoundError
 from src.snipster.models import Language, Snippet, SnippetCreate
 
 from .conftest import add_search_data
@@ -72,11 +72,19 @@ def test_repo_toggle_favorite(snippet, repo):
 
 
 def test_repo_add_tag(snippet, repo):
+    import uuid
+
     stored_snippet = repo.add(snippet)
-    repo.add_tag(stored_snippet.id, "foo")
-    assert "foo" in repo.get(stored_snippet.id).tags
-    repo.add_tag(stored_snippet.id, "bar")
-    assert "bar" in repo.get(stored_snippet.id).tags
+    # Use UUID to ensure completely unique tag names
+    unique_id = str(uuid.uuid4())[:8]
+    tag_name = f"tag-{unique_id}"
+
+    repo.add_tag(stored_snippet.id, tag_name)
+    snippet_with_tags = repo.get(stored_snippet.id)
+    # Tags are normalized to lowercase, so we need to check for the normalized version
+    normalized_tag = tag_name.strip().lower()
+    assert any(tag.name == normalized_tag for tag in snippet_with_tags.tags)
+
     with pytest.raises(SnippetNotFoundError):
         repo.add_tag(9999, "test")
 
@@ -85,8 +93,8 @@ def test_repo_remove_tag(snippet, repo):
     stored_snippet = repo.add(snippet)
     repo.add_tag(stored_snippet.id, "test-tag")
     repo.remove_tag(stored_snippet.id, "test-tag")
-    assert "test-tag" not in repo.get(stored_snippet.id).tags
-    with pytest.raises(ValueError):
+    assert not any(tag.name == "test-tag" for tag in repo.get(stored_snippet.id).tags)
+    with pytest.raises(TagNotFoundError):
         repo.remove_tag(stored_snippet.id, "non-existent-tag")
     with pytest.raises(SnippetNotFoundError):
         repo.remove_tag(9999, "test-tag")

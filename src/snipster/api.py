@@ -22,6 +22,35 @@ class HealthResponse(BaseModel):
     uptime_seconds: float
 
 
+class SnippetResponse(BaseModel):
+    """Response model that maintains backward compatibility for tags."""
+
+    id: int
+    title: str
+    code: str
+    language: str
+    description: str | None
+    favorite: bool
+    created_at: datetime
+    updated_at: datetime | None
+    tags: list[str]  # Keep as list of strings for backward compatibility
+
+    @classmethod
+    def from_snippet(cls, snippet: Snippet) -> "SnippetResponse":
+        """Convert a Snippet model to SnippetResponse."""
+        return cls(
+            id=snippet.id,
+            title=snippet.title,
+            code=snippet.code,
+            language=snippet.language,
+            description=snippet.description,
+            favorite=snippet.favorite,
+            created_at=snippet.created_at,
+            updated_at=snippet.updated_at,
+            tags=[tag.name for tag in snippet.tags],  # Extract tag names
+        )
+
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to Snipster API"}
@@ -47,19 +76,22 @@ def get_repo(session=Depends(get_session)):
 
 
 @app.post("/create", status_code=status.HTTP_201_CREATED)
-def create_snippet(snippet: SnippetCreate, repo=Depends(get_repo)) -> Snippet:
-    return repo.add(snippet)
+def create_snippet(snippet: SnippetCreate, repo=Depends(get_repo)) -> SnippetResponse:
+    created_snippet = repo.add(snippet)
+    return SnippetResponse.from_snippet(created_snippet)
 
 
 @app.get("/snippets", status_code=status.HTTP_200_OK)
-def list_snippets(repo=Depends(get_repo)) -> list[Snippet]:
-    return repo.list()
+def list_snippets(repo=Depends(get_repo)) -> list[SnippetResponse]:
+    snippets = repo.list()
+    return [SnippetResponse.from_snippet(snippet) for snippet in snippets]
 
 
 @app.get("/snippets/{snippet_id}")
-def get_snippet(snippet_id: int, repo=Depends(get_repo)) -> Snippet:
+def get_snippet(snippet_id: int, repo=Depends(get_repo)) -> SnippetResponse:
     try:
-        return repo.get(snippet_id)
+        snippet = repo.get(snippet_id)
+        return SnippetResponse.from_snippet(snippet)
     except SnippetNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -80,9 +112,10 @@ def delete_snippet(snippet_id: int, repo=Depends(get_repo)):
 
 
 @app.post("/snippets/{snippet_id}/toggle-favorite")
-def toggle_favorite(snippet_id: int, repo=Depends(get_repo)) -> Snippet:
+def toggle_favorite(snippet_id: int, repo=Depends(get_repo)) -> SnippetResponse:
     try:
-        return repo.toggle_favorite(snippet_id)
+        snippet = repo.toggle_favorite(snippet_id)
+        return SnippetResponse.from_snippet(snippet)
     except SnippetNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -101,7 +134,7 @@ def add_tags(
         TagsPayload, Body()
     ],  # Example: {"tags": ["python", "fastapi", "web"]}
     repo=Depends(get_repo),
-):
+) -> SnippetResponse:
     try:
         repo.get(snippet_id)
     except SnippetNotFoundError:
@@ -112,7 +145,8 @@ def add_tags(
     for t in tags_payload.tags:
         repo.add_tag(snippet_id, t)
 
-    return repo.get(snippet_id)
+    snippet = repo.get(snippet_id)
+    return SnippetResponse.from_snippet(snippet)
 
 
 @app.get("/search")
@@ -128,5 +162,6 @@ def search(
         ),
     ],
     repo=Depends(get_repo),
-):
-    return repo.fuzzy_search(q.strip().lower())
+) -> list[SnippetResponse]:
+    snippets = repo.fuzzy_search(q.strip().lower())
+    return [SnippetResponse.from_snippet(snippet) for snippet in snippets]

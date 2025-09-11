@@ -3,8 +3,6 @@ from datetime import datetime, timezone
 from typing import Sequence
 
 from rapidfuzz import process as rapidfuzz_process
-from sqlalchemy import Text, or_
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
@@ -90,21 +88,33 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
         if snippet is None:
             raise SnippetNotFoundError(f"Snippet with id {snippet_id} not found.")
 
-        tag_name = tag_name.strip().lower()
+        # Create a temporary tag to get the normalized name
+        temp_tag = Tag.model_validate({"name": tag_name})
+        normalized_name = temp_tag.name
 
+        # Check if tag already exists
         tag: Tag | None = self.session.exec(
-            select(Tag).where(Tag.name == tag_name)
+            select(Tag).where(Tag.name == normalized_name)
         ).one_or_none()
         if tag is None:
-            tag = Tag(name=tag_name)
+            tag = Tag.model_validate(
+                {"name": tag_name}
+            )  # Tag constructor will normalize
             self.session.add(tag)
             self.session.flush()  # populates tag.id without committing
-        try:
-            assert tag.id is not None  # narrows the type of tag.id to int
+
+        # Check if tag is already associated with this snippet
+        assert tag.id is not None
+        existing_link = self.session.exec(
+            select(SnippetTag).where(
+                SnippetTag.snippet_id == snippet_id, SnippetTag.tag_id == tag.id
+            )
+        ).one_or_none()
+
+        if existing_link is None:
+            # Only create the link if it doesn't exist
             self.session.add(SnippetTag(snippet_id=snippet_id, tag_id=tag.id))
             self.session.commit()
-        except IntegrityError:
-            self.session.rollback()  # link already exists or FK issue; proceed
 
         # load snippet w/ tags in one go
         stmt = (
@@ -152,17 +162,26 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
         return snippet
 
     def search(self, query: str) -> Sequence[Snippet]:
-        stmt = select(Snippet).where(
-            or_(
-                Snippet.title.ilike(f"%{query}%"),  # type: ignore
-                Snippet.code.ilike(f"%{query}%"),  # type: ignore
-                Snippet.description.ilike(f"%{query}%"),  # type: ignore
-                # This should work for both Sqlite and Postgres
-                Snippet.tags.cast(Text).ilike(f"%{query}%"),  # type: ignore
-            )
-        )
-        results = self.session.exec(stmt).all()
-        return [snippet for snippet in results]
+        # Get all snippets with their tags loaded
+        stmt = select(Snippet).options(selectinload(Snippet.tags))  # type: ignore
+        all_snippets = self.session.exec(stmt).all()
+
+        # Filter by snippet fields and tag names
+        filtered_results = []
+        query_lower = query.lower()
+        for snippet in all_snippets:
+            # Check if snippet fields contain the query
+            if (
+                query_lower in snippet.title.lower()
+                or query_lower in snippet.code.lower()
+                or (snippet.description and query_lower in snippet.description.lower())
+            ):
+                filtered_results.append(snippet)
+            # Check if any tag name contains the query
+            elif any(query_lower in tag.name.lower() for tag in snippet.tags):
+                filtered_results.append(snippet)
+
+        return filtered_results
 
     def fuzzy_search(self, query: str) -> Sequence[Snippet]:
         all_snippets = self.session.exec(select(Snippet)).all()
@@ -220,7 +239,7 @@ class InMemorySnippetRepo(AbstractSnippetRepo):
         existing_tag = next((tag for tag in snippet.tags if tag.name == tag_name), None)
         if existing_tag is None:
             # Create a new tag
-            tag = Tag(name=tag_name)
+            tag = Tag.model_validate({"name": tag_name})
             snippet.tags.append(tag)
             return snippet
 
@@ -234,7 +253,7 @@ class InMemorySnippetRepo(AbstractSnippetRepo):
             (tag for tag in snippet.tags if tag.name == tag_name), None
         )
         if tag_to_remove is None:
-            raise ValueError(
+            raise TagNotFoundError(
                 f"Tag {tag_name} not found on snippet with id {snippet_id}."
             )
 

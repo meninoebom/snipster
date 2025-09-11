@@ -12,6 +12,19 @@ class Language(str, Enum):
     rust = "rust"
 
 
+# ---------- snippet tags ----------
+class SnippetTag(SQLModel, table=True):
+    __tablename__ = "snippet_tag"  # type: ignore
+    __table_args__ = (
+        UniqueConstraint("snippet_id", "tag_id", name="uq_snippet_tag"),
+        Index("ix_snippet_tag_snippet_id", "snippet_id"),
+        Index("ix_snippet_tag_tag_id", "tag_id"),
+    )
+
+    snippet_id: int = Field(foreign_key="snippet.id", primary_key=True)
+    tag_id: int = Field(foreign_key="tag.id", primary_key=True)
+
+
 # ---------- snippets ----------
 class SnippetBase(SQLModel, table=False):
     title: str = Field(description="Title of the snippet", min_length=3)
@@ -39,9 +52,7 @@ class Snippet(SnippetBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime | None = None
-    tags: list["Tag"] = Relationship(
-        back_populates="snippets", link_model=lambda: SnippetTag
-    )
+    tags: list["Tag"] = Relationship(back_populates="snippets", link_model=SnippetTag)
 
     def __str__(self) -> str:
         return (
@@ -64,27 +75,26 @@ class SnippetCreate(SnippetBase, table=False):
 
 
 # ---------- tags ----------
-class TagBase(SQLModel):
-    name: str
+class TagBase(SQLModel, table=False):
+    name: str = Field(
+        index=True, min_length=1, max_length=50, description="Name of the tag"
+    )
 
     @field_validator("name")
     @classmethod
     def _normalize(cls, v: str) -> str:
         v = v.strip().lower()
-        if not (2 <= len(v) <= 50):
-            raise ValueError("Tag length must be 2–50.")
+        if not (1 <= len(v) <= 50):
+            raise ValueError("Tag length must be 1–50.")
         return v
 
 
 class Tag(TagBase, table=True):
-    __tablename__ = "tag"  # type: ignore
+    __tablename__ = "tag"
     __table_args__ = (Index("uq_tag_name_lower", func.lower("name"), unique=True),)
     id: int | None = Field(default=None, primary_key=True)
-    name: str = Field(
-        index=True, min_length=1, max_length=50, description="Name of the tag"
-    )  # normalize via validator above
-    snippets: list[Snippet] = Relationship(
-        back_populates="tags", link_model=lambda: SnippetTag
+    snippets: list["Snippet"] = Relationship(
+        back_populates="tags", link_model=SnippetTag
     )
 
 
@@ -94,16 +104,3 @@ class TagCreate(TagBase):
 
 class TagRead(TagBase):
     id: int
-
-
-# ---------- snippet tags ----------
-class SnippetTag(SQLModel, table=True):
-    __tablename__ = "snippet_tag"  # type: ignore
-    __table_args__ = (
-        UniqueConstraint("snippet_id", "tag_id", name="uq_snippet_tag"),
-        Index("ix_snippet_tag_snippet_id", "snippet_id"),
-        Index("ix_snippet_tag_tag_id", "tag_id"),
-    )
-
-    snippet_id: int = Field(foreign_key="snippet.id", primary_key=True)
-    tag_id: int = Field(foreign_key="tag.id", primary_key=True)

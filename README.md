@@ -142,10 +142,18 @@ Alembic handles database schema migrations for the project.
 ### Backend (`src/snipster/`)
 
 - **`api.py`**: FastAPI application with REST endpoints
-- **`models.py`**: Pydantic models for request/response validation
-- **`repo.py`**: Data access layer for snippets
+- **`models.py`**: SQLModel data models and validation
+- **`repo.py`**: Repository pattern implementation for data access
 - **`db.py`**: Database connection and session management
 - **`cli.py`**: Command-line interface for snippet management
+
+#### Repository Pattern
+
+The data layer uses the Repository Pattern with two implementations:
+- **`DatabaseBackedSnippetRepo`**: Production implementation using SQLite/PostgreSQL
+- **`InMemorySnippetRepo`**: In-memory implementation for fast testing
+
+Tests run against both implementations to ensure consistent behavior and catch database-specific issues. This pattern enables easy testing and future storage backend changes.
 
 ### Frontend (`ui/`)
 

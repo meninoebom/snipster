@@ -8,6 +8,9 @@ from sqlmodel import SQLModel
 # Import the models module itself to register SQLModel classes
 from alembic import context
 
+# Import all models explicitly to ensure they are registered with SQLModel
+from src.snipster.models import *  # noqa: F403
+
 load_dotenv()
 
 

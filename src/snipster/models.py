@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Any
 
 from pydantic import field_validator
-from sqlmodel import Field, Index, Relationship, SQLModel, UniqueConstraint, func
+from sqlmodel import Field, ForeignKeyConstraint, Index, Relationship, SQLModel, text
 
 
 class Language(str, Enum):
@@ -16,13 +16,15 @@ class Language(str, Enum):
 class SnippetTag(SQLModel, table=True):
     __tablename__ = "snippet_tag"  # type: ignore
     __table_args__ = (
-        UniqueConstraint("snippet_id", "tag_id", name="uq_snippet_tag"),
+        # UniqueConstraint("snippet_id", "tag_id", name="uq_snippet_tag"),
+        ForeignKeyConstraint(["snippet_id"], ["snippet.id"], ondelete="CASCADE"),
+        ForeignKeyConstraint(["tag_id"], ["tag.id"], ondelete="CASCADE"),
         Index("ix_snippet_tag_snippet_id", "snippet_id"),
         Index("ix_snippet_tag_tag_id", "tag_id"),
     )
 
-    snippet_id: int = Field(foreign_key="snippet.id", primary_key=True)
-    tag_id: int = Field(foreign_key="tag.id", primary_key=True)
+    snippet_id: int = Field(primary_key=True)
+    tag_id: int = Field(primary_key=True)
 
 
 # ---------- snippets ----------
@@ -52,7 +54,14 @@ class Snippet(SnippetBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime | None = None
-    tags: list["Tag"] = Relationship(back_populates="snippets", link_model=SnippetTag)
+    tags: list["Tag"] = Relationship(
+        back_populates="snippets",
+        link_model=SnippetTag,
+        sa_relationship_kwargs={
+            "lazy": "selectin",  # efficient M2M loads
+            "passive_deletes": True,  # rely on DB ON DELETE for join rows
+        },
+    )
 
     def __str__(self) -> str:
         return (
@@ -91,7 +100,7 @@ class TagBase(SQLModel, table=False):
 
 class Tag(TagBase, table=True):
     __tablename__ = "tag"
-    __table_args__ = (Index("uq_tag_name_lower", func.lower("name"), unique=True),)
+    __table_args__ = (Index("uq_tag_name_lower", text("lower(name)"), unique=True),)
     id: int | None = Field(default=None, primary_key=True)
     snippets: list["Snippet"] = Relationship(
         back_populates="tags", link_model=SnippetTag

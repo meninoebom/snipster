@@ -54,6 +54,10 @@ class State(rx.State):
         else:
             self.selected_snippet_id = snippet_id
 
+    def handle_snippet_click(self, snippet_id: int):
+        """Handle snippet click events"""
+        self.select_snippet(snippet_id)
+
     async def add_snippet(self):
         if not self.new_title.strip() or not self.new_code.strip():
             return
@@ -140,6 +144,8 @@ def snippet_card(snippet: dict):
                 rx.spacer(),
                 width="100%",
             ),
+            # TODO: Add tags display back once we confirm the API is returning tags
+            # rx.text("Tags: ...", size="2", color="gray"),
             rx.cond(
                 State.selected_snippet_id == snippet.get("id"),
                 rx.vstack(
@@ -151,7 +157,9 @@ def snippet_card(snippet: dict):
                     rx.hstack(
                         rx.button(
                             "Delete",
-                            on_click=lambda: State.delete_snippet(snippet["id"]),
+                            on_click=lambda snippet_id=snippet[
+                                "id"
+                            ]: State.delete_snippet(snippet_id),
                             size="1",
                             variant="surface",
                             color="red",
@@ -164,7 +172,7 @@ def snippet_card(snippet: dict):
             ),
             spacing="2",
             width="100%",
-            on_click=lambda: State.select_snippet(snippet["id"]),
+            on_click=lambda: State.handle_snippet_click(snippet["id"]),
             cursor="pointer",
         ),
         width="100%",

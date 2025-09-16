@@ -44,7 +44,7 @@ class SnippetResponse(BaseModel):
     favorite: bool
     created_at: datetime
     updated_at: datetime | None
-    tags: list[str]  # Keep as list of strings for backward compatibility
+    tags: str  # Return as comma-separated string for better UI display
 
     @classmethod
     def from_snippet(cls, snippet: Snippet) -> "SnippetResponse":
@@ -58,7 +58,9 @@ class SnippetResponse(BaseModel):
             favorite=snippet.favorite,
             created_at=snippet.created_at,
             updated_at=snippet.updated_at,
-            tags=[tag.name for tag in snippet.tags],  # Extract tag names
+            tags=", ".join(
+                tag.name for tag in snippet.tags
+            ),  # Join tag names with commas
         )
 
 

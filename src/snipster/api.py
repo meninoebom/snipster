@@ -22,6 +22,17 @@ class HealthResponse(BaseModel):
     uptime_seconds: float
 
 
+class CreateSnippetRequest(BaseModel):
+    """Request model specifically for the /create endpoint"""
+
+    title: str
+    code: str
+    language: str
+    description: str | None = None
+    favorite: bool = False
+    tags: list[str] = []
+
+
 class SnippetResponse(BaseModel):
     """Response model that maintains backward compatibility for tags."""
 
@@ -76,11 +87,22 @@ def get_repo(session=Depends(get_session)):
 
 
 @app.post("/create", status_code=status.HTTP_201_CREATED)
-def create_snippet(snippet: SnippetCreate, repo=Depends(get_repo)) -> SnippetResponse:
-    created_snippet = repo.add(snippet)
-    # This is a workaround to load the tags while the session is active but
-    # going to be deprecated and replaced by a serivice
-    _ = created_snippet.tags  # Load tags while session is active
+def create_snippet(
+    request: CreateSnippetRequest, repo=Depends(get_repo)
+) -> SnippetResponse:
+    # Convert request to domain model (excluding tags)
+    snippet_data = request.model_dump(exclude={"tags"})
+    snippet_create = SnippetCreate(**snippet_data)
+
+    # Use repo to create snippet
+    created_snippet = repo.add(snippet_create)
+
+    # Use repo to add tags
+    for tag_name in request.tags:
+        repo.add_tag(created_snippet.id, tag_name)
+
+    # Load tags while session is active
+    _ = created_snippet.tags
     return SnippetResponse.from_snippet(created_snippet)
 
 

@@ -78,6 +78,9 @@ def get_repo(session=Depends(get_session)):
 @app.post("/create", status_code=status.HTTP_201_CREATED)
 def create_snippet(snippet: SnippetCreate, repo=Depends(get_repo)) -> SnippetResponse:
     created_snippet = repo.add(snippet)
+    # This is a workaround to load the tags while the session is active but
+    # going to be deprecated and replaced by a serivice
+    _ = created_snippet.tags  # Load tags while session is active
     return SnippetResponse.from_snippet(created_snippet)
 
 

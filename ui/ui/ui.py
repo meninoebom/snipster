@@ -139,8 +139,6 @@ def snippet_card(snippet: dict):
                     snippet["title"],
                     weight="bold",
                     size="3",
-                    on_click=State.select_snippet(snippet["id"]),
-                    cursor="pointer",
                 ),
                 rx.badge(snippet.get("language", "text"), variant="surface"),
                 rx.spacer(),
@@ -181,6 +179,8 @@ def snippet_card(snippet: dict):
         ),
         width="100%",
         margin_bottom="2",
+        on_click=State.select_snippet(snippet["id"]),
+        cursor="pointer",
     )
 
 

@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from .db import default_session_factory
 from .exceptions import SnippetNotFoundError
-from .models import Snippet, SnippetCreate
+from .models import CreateSnippetRequest, SnippetCreate, SnippetResponse
 from .repo import DatabaseBackedSnippetRepo as db_repo
 
 app = FastAPI()
@@ -20,48 +20,6 @@ class HealthResponse(BaseModel):
     timestamp: datetime
     version: str
     uptime_seconds: float
-
-
-class CreateSnippetRequest(BaseModel):
-    """Request model specifically for the /create endpoint"""
-
-    title: str
-    code: str
-    language: str
-    description: str | None = None
-    favorite: bool = False
-    tags: list[str] = []
-
-
-class SnippetResponse(BaseModel):
-    """Response model that maintains backward compatibility for tags."""
-
-    id: int
-    title: str
-    code: str
-    language: str
-    description: str | None
-    favorite: bool
-    created_at: datetime
-    updated_at: datetime | None
-    tags: str  # Return as comma-separated string for better UI display
-
-    @classmethod
-    def from_snippet(cls, snippet: Snippet) -> "SnippetResponse":
-        """Convert a Snippet model to SnippetResponse."""
-        return cls(
-            id=snippet.id,
-            title=snippet.title,
-            code=snippet.code,
-            language=snippet.language,
-            description=snippet.description,
-            favorite=snippet.favorite,
-            created_at=snippet.created_at,
-            updated_at=snippet.updated_at,
-            tags=", ".join(
-                tag.name for tag in snippet.tags
-            ),  # Join tag names with commas
-        )
 
 
 @app.get("/")

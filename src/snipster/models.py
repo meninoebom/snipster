@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
-from pydantic import field_validator
+from pydantic import BaseModel, field_validator
 from sqlmodel import Field, ForeignKeyConstraint, Index, Relationship, SQLModel, text
 
 
@@ -81,6 +81,41 @@ class Snippet(SnippetBase, table=True):
 
 class SnippetCreate(SnippetBase, table=False):
     pass
+
+
+class CreateSnippetRequest(SnippetBase):
+    """Request model specifically for the /create endpoint"""
+
+    tags: list[str] = []
+
+
+class SnippetResponse(BaseModel):
+    """Response model for snippets"""
+
+    id: int | None
+    title: str
+    code: str
+    language: str
+    description: str | None
+    favorite: bool
+    created_at: datetime
+    updated_at: datetime | None
+    tags: list[str] = []
+
+    @classmethod
+    def from_snippet(cls, snippet: Snippet) -> "SnippetResponse":
+        """Convert a Snippet model to SnippetResponse."""
+        return cls(
+            id=snippet.id,
+            title=snippet.title,
+            code=snippet.code,
+            language=snippet.language,
+            description=snippet.description,
+            favorite=snippet.favorite,
+            created_at=snippet.created_at,
+            updated_at=snippet.updated_at,
+            tags=[tag.name for tag in snippet.tags],  # Extract tag names as list
+        )
 
 
 # ---------- tags ----------

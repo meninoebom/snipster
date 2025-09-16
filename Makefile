@@ -11,7 +11,7 @@ init: install-dev
 	uv run alembic upgrade head
 
 .PHONY: fastapi-dev
-dev: install-dev init
+fastapi-dev: install-dev init
 	uv run fastapi dev src/snipster/api.py
 
 .PHONY: reflex-dev

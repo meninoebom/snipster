@@ -15,10 +15,10 @@ For the fastest setup, use the provided Makefile commands:
 
 ```bash
 # Install dependencies and start backend server
-make dev
+make fastapi-dev
 
 # In another terminal, start the frontend
-make ui
+make reflex-dev
 ```
 
 This will automatically:

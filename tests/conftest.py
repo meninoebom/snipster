@@ -1,8 +1,8 @@
 from typing import Generator
 
 import pytest
-from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, create_engine
+from testcontainers.postgres import PostgresContainer
 
 from src.snipster.db import SessionFactory
 from src.snipster.models import Language, SnippetCreate
@@ -13,30 +13,51 @@ from src.snipster.repo import DatabaseBackedSnippetRepo, InMemorySnippetRepo
 # =============================================================================
 
 
+# Spins up Postgres once per module
+@pytest.fixture(scope="module")
+def postgres_container():
+    """Spin up a PostgreSQL container for testing."""
+    # Note: We set `driver=None` in the PostgresContainer so that
+    # `get_connection_url()` returns a plain `postgresql://...` string
+    # (without assuming psycopg2). Then we call `.replace("postgresql://",
+    # "postgresql+psycopg://")` so SQLAlchemy uses psycopg3 explicitly. See below.
+    postgres = PostgresContainer("postgres:14", driver=None)
+    postgres.start()
+    try:
+        yield postgres
+    finally:
+        postgres.stop()
+
+
 @pytest.fixture(scope="function")
-def test_session_factory():
-    """Provide a SessionFactory with in-memory SQLite for tests."""
-    test_engine = create_engine(
-        "sqlite://",
-        # This allows multiple threads to use the same connection
-        # otherwise you'll get an error:
-        # "SQLite objects created in a thread can only be used in that same thread"
-        connect_args={"check_same_thread": False},
-        # StaticPool maintains a single connection shared by all threads to avoid
-        # "database is locked" errors with in-memory SQLite
-        poolclass=StaticPool,
-        # Disable SQL query logging to keep test output clean
-        echo=False,
+def test_session_factory(postgres_container):
+    """Provide a SessionFactory with a PostgreSQL database for tests."""
+    # See above note about `driver=None` in `postgres_container` fixture.
+    url = postgres_container.get_connection_url().replace(
+        "postgresql://", "postgresql+psycopg://"
     )
+    test_engine = create_engine(
+        url,
+        future=True,
+        pool_pre_ping=True,
+    )
+
     SQLModel.metadata.create_all(test_engine)
+
+    # A SessionFactory here is our wrapper around SQLAlchemy's sessionmaker—
+    # it produces new DB sessions tied to the same engine, so each test can
+    # work with a clean, properly configured session.
     factory = SessionFactory(test_engine)
 
     yield factory
 
     # Clean up the database after each test
     SQLModel.metadata.drop_all(test_engine)
-
+    # Close all sessions and dispose of the engine
     factory.close_all_sessions()
+    # Dispose of the engine
+    # This is important to do after all tests have finished
+    # to avoid resource leaks
     test_engine.dispose()
 
 

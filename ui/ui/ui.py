@@ -9,8 +9,16 @@ load_dotenv()
 API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 
 
+class Snippet(rx.Model):
+    id: int
+    title: str
+    code: str
+    language: str
+    tags: list[str]
+
+
 class State(rx.State):
-    snippets: list[dict] = []
+    snippets: list[Snippet] = []
     search_query: str = ""
     show_add_form: bool = False
     selected_snippet_id: int = 0
@@ -30,7 +38,8 @@ class State(rx.State):
                         f"{API_BASE_URL}/search", params={"q": query}
                     )
                     if response.status_code == 200:
-                        self.snippets = response.json()
+                        data = response.json()
+                        self.snippets = [Snippet(**item) for item in data]
             else:
                 await self.load_all_snippets()
         except Exception:
@@ -41,7 +50,8 @@ class State(rx.State):
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{API_BASE_URL}/snippets")
                 if response.status_code == 200:
-                    self.snippets = response.json()
+                    data = response.json()
+                    self.snippets = [Snippet(**item) for item in data]
         except Exception:
             self.snippets = []
 
@@ -82,7 +92,22 @@ class State(rx.State):
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.delete(f"{API_BASE_URL}/snippets/{snippet_id}")
-                if response.status_code == 200:
+                if response.status_code in (200, 204):
+                    await self.load_all_snippets()
+        except Exception:
+            pass
+
+    async def add_tag_to_snippet(self, snippet_id: int, form_data: dict):
+        tag = form_data.get("tag", "").strip()
+        if not tag:
+            return
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{API_BASE_URL}/snippets/{snippet_id}/add-tags",
+                    json={"tags": [tag]},
+                )
+                if response.status_code == 201:
                     await self.load_all_snippets()
         except Exception:
             pass
@@ -131,7 +156,11 @@ def add_form():
     )
 
 
-def snippet_card(snippet: dict):
+def display_tag(tag: rx.Var[str]) -> rx.Component:
+    return rx.badge(tag, variant="soft")
+
+
+def snippet_card(snippet: Snippet):
     return rx.card(
         rx.vstack(
             rx.hstack(
@@ -147,7 +176,7 @@ def snippet_card(snippet: dict):
             # Display tags - formatted text
             rx.hstack(
                 rx.text("Tags:", size="2", color="gray"),
-                rx.text(snippet["tags"], size="2", color="blue"),
+                rx.foreach(snippet["tags"], display_tag),
                 spacing="2",
             ),
             rx.cond(
@@ -157,6 +186,15 @@ def snippet_card(snippet: dict):
                         snippet["code"],
                         language=snippet.get("language", "text"),
                         show_line_numbers=True,
+                    ),
+                    rx.form(
+                        rx.hstack(
+                            rx.input(name="tag", placeholder="Add a tag…", size="1"),
+                            rx.button("Add tag", size="1"),
+                            spacing="2",
+                        ),
+                        on_submit=lambda data,
+                        _id=snippet["id"]: State.add_tag_to_snippet(_id, data),
                     ),
                     rx.hstack(
                         rx.button(

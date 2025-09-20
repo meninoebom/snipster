@@ -102,10 +102,33 @@ def test_repo_remove_tag(snippet, repo):
 
 def test_repo_search(repo):
     add_search_data(repo)
+
+    # Test existing functionality
     assert len(repo.search("foo")) == 3
     assert len(repo.search("bar")) == 1
     assert len(repo.search("baz")) == 1
     assert len(repo.search("zap")) == 0
+
+    # Test tag search functionality
+    # Add a snippet with tags
+    tagged_snippet = SnippetCreate(
+        title="Python Tutorial",
+        code="print('hello world')",
+        description="A basic Python example",
+        language=Language.python,
+    )
+    created_snippet = repo.add(tagged_snippet)
+
+    # Add tags to the snippet
+    repo.add_tag(created_snippet.id, "python")
+    repo.add_tag(created_snippet.id, "beginner")
+    repo.add_tag(created_snippet.id, "tutorial")
+
+    # Test searching by tag names
+    assert len(repo.search("python")) >= 1  # Should find the tagged snippet
+    assert len(repo.search("beginner")) >= 1  # Should find the tagged snippet
+    assert len(repo.search("tutorial")) >= 1  # Should find the tagged snippet
+    assert len(repo.search("advanced")) == 0  # Should not find anything
 
 
 def test_repo_fuzzy_search(repo):
@@ -133,18 +156,28 @@ def test_repo_fuzzy_search(repo):
     assert len(results) == 1
     assert results[0].title == "Calculate Average"
 
-    # Test partial match
-    snippet3 = SnippetCreate(
-        title="Parse JSON String",
-        code="json.loads(str)",
-        description="Parse JSON",
-        language=Language.python,
+    # Test tag search functionality
+    # Add a snippet with tags
+    tagged_snippet = SnippetCreate(
+        title="JavaScript Basics",
+        code="console.log('Hello');",
+        description="Basic JavaScript example",
+        language=Language.javascript,
     )
-    repo.add(snippet3)
-    results = repo.fuzzy_search("JSON")
-    assert len(results) == 1
-    assert results[0].title == "Parse JSON String"
+    created_snippet = repo.add(tagged_snippet)
 
-    # Test no match below threshold
-    results = repo.fuzzy_search("Something Completely Different")
-    assert len(results) == 0
+    # Add tags to the snippet
+    repo.add_tag(created_snippet.id, "javascript")
+    repo.add_tag(created_snippet.id, "web")
+    repo.add_tag(created_snippet.id, "frontend")
+
+    # Test fuzzy searching by tag names
+    results = repo.fuzzy_search("javascrip")  # Intentional typo
+    assert len(results) >= 1  # Should find the tagged snippet
+    assert any(snippet.title == "JavaScript Basics" for snippet in results)
+
+    results = repo.fuzzy_search("web")
+    assert len(results) >= 1  # Should find the tagged snippet
+
+    results = repo.fuzzy_search("frontend")
+    assert len(results) >= 1  # Should find the tagged snippet

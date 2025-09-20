@@ -184,14 +184,37 @@ class DatabaseBackedSnippetRepo(AbstractSnippetRepo):
         return filtered_results
 
     def fuzzy_search(self, query: str) -> Sequence[Snippet]:
-        all_snippets = self.session.exec(select(Snippet)).all()
-        snippet_dict = {s.title.lower(): s for s in all_snippets}
+        # Get all snippets with their tags loaded
+        all_snippets = self.session.exec(
+            select(Snippet).options(selectinload(Snippet.tags))  # type: ignore
+        ).all()
+
+        # Create a combined search dictionary that includes both titles and tag names
+        search_dict = {}
+
+        for snippet in all_snippets:
+            # Add title-based search
+            search_dict[snippet.title.lower()] = snippet
+
+            # Add tag-based search
+            for tag in snippet.tags:
+                search_dict[tag.name.lower()] = snippet
+
         # Normalize query to lowercase for better matching
         normalized_query = query.lower()
         matches = rapidfuzz_process.extract(
-            normalized_query, snippet_dict.keys(), limit=5, score_cutoff=70
+            normalized_query, search_dict.keys(), limit=5, score_cutoff=70
         )
-        results = [snippet_dict[m[0]] for m in matches]
+
+        # Get unique snippets (avoid duplicates if both title and tag match)
+        seen_ids = set()
+        results = []
+        for match in matches:
+            snippet = search_dict[match[0]]
+            if snippet.id not in seen_ids:
+                results.append(snippet)
+                seen_ids.add(snippet.id)
+
         return results
 
 
@@ -281,11 +304,30 @@ class InMemorySnippetRepo(AbstractSnippetRepo):
         return list(results)
 
     def fuzzy_search(self, query: str) -> Sequence[Snippet]:
-        snippet_dict = {s.title.lower(): s for s in self.snippets.values()}
+        # Create a combined search dictionary that includes both titles and tag names
+        search_dict = {}
+
+        for snippet in self.snippets.values():
+            # Add title-based search
+            search_dict[snippet.title.lower()] = snippet
+
+            # Add tag-based search
+            for tag in snippet.tags:
+                search_dict[tag.name.lower()] = snippet
+
         # Normalize query to lowercase for better matching
         normalized_query = query.lower()
         matches = rapidfuzz_process.extract(
-            normalized_query, snippet_dict.keys(), limit=5, score_cutoff=70
+            normalized_query, search_dict.keys(), limit=5, score_cutoff=70
         )
-        results = [snippet_dict[m[0]] for m in matches]
+
+        # Get unique snippets (avoid duplicates if both title and tag match)
+        seen_ids = set()
+        results = []
+        for match in matches:
+            snippet = search_dict[match[0]]
+            if snippet.id not in seen_ids:
+                results.append(snippet)
+                seen_ids.add(snippet.id)
+
         return results
